@@ -29,7 +29,8 @@ spring:
       client:
         registration:
           google:
-
+            client-id: "654581949282-dmvkqbivaa8rmvem7ipjbas30p5akkrm.apps.googleusercontent.com"
+            client-secret: "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"
             scope: openid, profile, email
             redirect-uri: "http://localhost:8222/login/oauth2/code/google"
         provider:
@@ -71,3 +72,15 @@ eureka:
     service-url:
       defaultZone: http://localhost:8761/eureka
 
+aws:
+  s3:
+    access:
+      key: AKIAT4GVRMTPBTFGNH77
+    secret:
+      key: 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
+    region: eu-north-1
+    bucket: arjay-fileupload
+
+jwt:
+  secret: "TaK+HaV^uvCHEFsEVfypW#7g9^k*Z8$V"
+  expiration: 3600000
