@@ -1,0 +1,73 @@
+
+server:
+  port: 8050
+spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5432/member
+    username: arjay
+    password: arjay
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    database: postgresql
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    properties:
+      hibernate:
+        format_sql: true
+        type: TRACE
+  flyway:
+    baseline-on-migrate: true
+    enabled: true
+    baseline-description: "init"
+    baseline-version: 0
+    user: ${spring.datasource.username}
+    password: ${spring.datasource.password}
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+
+            scope: openid, profile, email
+            redirect-uri: "http://localhost:8222/login/oauth2/code/google"
+        provider:
+          google:
+            authorization-uri: https://accounts.google.com/o/oauth2/auth
+            token-uri: https://oauth2.googleapis.com/token
+            user-info-uri: https://www.googleapis.com/oauth2/v3/userinfo
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    datatype:
+      jsr310:
+        serializer: com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer
+        deserializer: com.fasterxml.jackson.datatype.jsr310.deser.LocalDateDeserializer
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+keyStore:
+  path: keystore.jks
+  password: password
+
+application:
+  config:
+    organization-url: http://localhost:8222/api/v1/organizations
+
+logging:
+  level:
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql: TRACE
+    org.springframework.cloud.netflix.eureka.EurekaClient: DEBUG
+    com.netflix.discovery: DEBUG
+
+eureka:
+  instance:
+    hostname: localhost
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka
+

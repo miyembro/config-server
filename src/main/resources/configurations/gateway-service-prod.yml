@@ -1,0 +1,12 @@
+management:
+  zipkin:
+    tracing:
+      enabled: true
+      endpoint: http://zipkin:9411/api/v2/spans
+
+eureka:
+  instance:
+    hostname: gateway-service
+  client:
+    service-url:
+      defaultZone: http://discovery-service:8761/eureka

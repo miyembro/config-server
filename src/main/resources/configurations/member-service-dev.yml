@@ -1,0 +1,42 @@
+server:
+  port: 8050
+spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://miyembromemberdev.ch2cua0wgb3v.eu-north-1.rds.amazonaws.com:5432/member
+    username: arjay
+    password: Miyembro24122022
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    database: postgresql
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    properties:
+      hibernate:
+        format_sql: true
+        type: TRACE
+  flyway:
+    baseline-on-migrate: true
+    enabled: true
+    baseline-description: "init"
+    baseline-version: 0
+    user: ${spring.datasource.username}
+    password: ${spring.datasource.password}
+
+eureka:
+  instance:
+    hostname: localhost
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka
+
+application:
+  config:
+    organization-url: http://localhost:8222/api/v1/organizations
+
+management:
+  zipkin:
+    tracing:
+      enabled: true
+      endpoint: http://localhost:9411/api/v2/spans

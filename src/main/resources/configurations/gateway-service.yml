@@ -1,0 +1,68 @@
+server:
+  port: 8222
+spring:
+  security:
+    csrf:
+      enabled: false
+  cloud:
+    gateway:
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins:
+              - "http://localhost:4200"
+              - "https://localhost:4200"
+              - "https://localhost:4500"
+              - "http://127.0.0.1:30055"
+            allowedMethods: "*"
+            allowedHeaders: "*"
+            allowCredentials: true
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true  # Ensures service names are lowercase
+      routes:
+        - id: organization-service
+          uri: lb:http://ORGANIZATION-SERVICE
+          predicates:
+            - Path=/api/v1/organizations/**
+          filters:
+            - RemoveRequestHeader=Cookie
+            - AuthorizationHeaderFilter
+        - id: member-service
+          uri: lb:http://MEMBER-SERVICE
+          predicates:
+            - Path=/api/v1/members/**
+        - id: membership-service
+          uri: lb:http://MEMBER-SERVICE
+          predicates:
+            - Path=/api/v1/memberships/**
+        - id: membership-type-service
+          uri: lb:http://MEMBER-SERVICE
+          predicates:
+            - Path=/api/v1/membership-types/**
+        - id: membership-status-service
+          uri: lb:http://MEMBER-SERVICE
+          predicates:
+            - Path=/api/v1/membership-statuses/**
+        - id: authentication-service
+          uri: lb:http://MEMBER-SERVICE
+          predicates:
+            - Path=/api/v1/auth/**
+        - id: menu-service
+          uri: lb:http://MEMBER-SERVICE
+          predicates:
+            - Path=/api/v1/menus/**
+        - id: role-service
+          uri: lb:http://MEMBER-SERVICE
+          predicates:
+            - Path=/api/v1/roles/**
+        - id: event-service
+          uri: lb:http://EVENT-SERVICE
+          predicates:
+            - Path=/api/v1/event/**
+        - id: event-confirmation-service
+          uri: lb:http://EVENT-SERVICE
+          predicates:
+            - Path=/api/v1/event-confirmation/**
+

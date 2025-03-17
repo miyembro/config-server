@@ -1,0 +1,30 @@
+spring:
+  data:
+    mongodb:
+      username: arjay
+      password: Miyembro24122022
+      host: ec2-13-48-91-4.eu-north-1.compute.amazonaws.com
+      port: 27017
+      database: organization
+      authentication-database: admin
+
+eureka:
+  instance:
+    hostname: organization-service
+  client:
+    service-url:
+      defaultZone: http://discovery-service:8761/eureka
+
+application:
+  config:
+    membership-type-url: http://gateway-service:8222/api/v1/membership-types
+    membership-url: http://gateway-service:8222/api/v1/memberships
+    member-url: http://gateway-service:8222/api/v1/members
+    role-url: http://gateway-service:8222/api/v1/roles
+
+
+management:
+  zipkin:
+    tracing:
+      enabled: true
+      endpoint: http://zipkin:9411/api/v2/spans
