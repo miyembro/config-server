@@ -66,3 +66,5 @@ spring:
           predicates:
             - Path=/api/v1/event-confirmation/**
 
+token:
+  secret: TaK+HaV^uvCHEFsEVfypW#7g9^k*Z8$V
