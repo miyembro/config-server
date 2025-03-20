@@ -13,6 +13,14 @@ pipeline {
     }
 
     stages {
+         stage('Check Docker') {
+            steps {
+                script {
+                    sh 'docker version'
+                    sh 'docker info'
+                }
+            }
+        }
         stage('Preparation') {
             steps {
                 cleanWs()  // Clean the workspace
@@ -56,6 +64,18 @@ pipeline {
             steps {
                 sh 'envsubst < ${WORKSPACE}/deploy.yaml | kubectl apply -f -'  // Deploy to Kubernetes
             }
+        }
+    }
+
+    post {
+        always {
+            cleanWs()  // Clean the workspace
+        }
+        success {
+            echo "Pipeline succeeded!"
+        }
+        failure {
+            echo "Pipeline failed!"
         }
     }
 }
