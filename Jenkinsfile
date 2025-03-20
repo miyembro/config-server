@@ -1,36 +1,5 @@
 pipeline {
-    agent {
-        kubernetes {
-            yaml """
-			apiVersion: v1
-			kind: Pod
-			spec:
-			  containers:
-			  - name: jenkins
-				image: arjayfuentes24/miyembro-jenkins:latest
-				volumeMounts:
-				- name: workspace
-				  mountPath: /var/jenkins_home
-			  - name: kaniko
-				image: gcr.io/kaniko-project/executor:latest
-				args: ["--dockerfile=Dockerfile", "--context=dir:///workspace", "--destination=${env.REPOSITORY_TAG}"]
-				volumeMounts:
-				- name: workspace
-				  mountPath: /workspace
-				- name: secret-volume
-				  mountPath: /kaniko/.docker
-			  volumes:
-			  - name: workspace
-				emptyDir: {}
-			  - name: secret-volume
-				secret:
-				  secretName: regcred
-				  items:
-				  - key: .dockerconfigjson
-					path: config.json
-			"""
-        }
-    }
+    agent any
 
     environment {
         // You must set the following environment variables
@@ -44,6 +13,14 @@ pipeline {
     }
 
     stages {
+         stage('Check Docker') {
+            steps {
+                script {
+                    sh 'docker version'
+                    sh 'docker info'
+                }
+            }
+        }
         stage('Preparation') {
             steps {
                 cleanWs()  // Clean the workspace
@@ -60,20 +37,25 @@ pipeline {
 
         stage('Build and Push Image') {
             steps {
-                container('kaniko') {
-                    script {
-                        echo "REPOSITORY_TAG: ${REPOSITORY_TAG}"
-                        echo "IMAGE_TAG: ${IMAGE_TAG}"
-                        echo "IMAGE_NAME: ${IMAGE_NAME}"
+                script {
 
-                        // Kaniko will build and push the Docker image in one step
-                        sh """
-                        /kaniko/executor \
-                            --dockerfile=Dockerfile \
-                            --context=dir:///workspace \
-                            --destination=${REPOSITORY_TAG}
-                        """
-                    }
+                    echo "REPOSITORY_TAG: ${REPOSITORY_TAG}"
+
+                    echo "IMAGE_TAG: ${IMAGE_TAG}"
+
+                    echo "IMAGE_NAME: ${IMAGE_NAME}"
+
+                    // Authenticate with Docker Hub using the credentials
+                    sh "echo ${DOCKER_HUB_CREDS_PSW} | docker login -u ${DOCKER_HUB_CREDS_USR} --password-stdin"
+
+                    // Build the Docker image
+                    sh "docker image build -t ${IMAGE_NAME} ."
+
+                    // Tag the Docker image for the repository
+                    sh "docker tag ${IMAGE_NAME} ${REPOSITORY_TAG}"
+
+                    // Push the Docker image to Docker Hub
+                    sh "docker push ${REPOSITORY_TAG}"
                 }
             }
         }
