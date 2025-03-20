@@ -14,7 +14,7 @@ spring:
               - "https://localhost:4200"
               - "https://localhost:4500"
               - "http://127.0.0.1:30055"
-              - "http://acaedbbec2f464e9b8a49837eb85274a-1147390452.eu-north-1.elb.amazonaws.com"
+              - "http://a8685bbecfb704a3d9be9ff7c79d600a-1930177911.eu-north-1.elb.amazonaws.com"
             allowedMethods: "*"
             allowedHeaders: "*"
             allowCredentials: true
