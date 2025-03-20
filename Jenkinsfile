@@ -19,7 +19,7 @@ spec:
   volumes:
     - name: kaniko-secret
       secret:
-        secretName: aws-ecr-secret
+        secretName: docker-hub-secret
 """
         }
     }
