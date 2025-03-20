@@ -87,8 +87,8 @@ spec:
 
     post {
         always {
-            node {
-                cleanWs()  // Clean the workspace
+            script {
+                cleanWs()
             }
         }
         success {
@@ -98,4 +98,5 @@ spec:
             echo "Pipeline failed!"
         }
     }
+
 }
