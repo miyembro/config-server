@@ -1,75 +1,94 @@
 pipeline {
-    agent any
+    agent {
+        kubernetes {
+            yaml """
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - name: jenkins
+    image: arjayfuentes24/miyembro-jenkins:latest
+    volumeMounts:
+    - name: workspace
+      mountPath: /var/jenkins_home
+  - name: kaniko
+    image: gcr.io/kaniko-project/executor:latest
+    args: ["--dockerfile=Dockerfile", "--context=dir:///workspace", "--destination=\${env.REPOSITORY_TAG}"]
+    volumeMounts:
+    - name: workspace
+      mountPath: /workspace
+    - name: secret-volume
+      mountPath: /kaniko/.docker
+  volumes:
+  - name: workspace
+    emptyDir: {}
+  - name: secret-volume
+    secret:
+      secretName: regcred
+      items:
+      - key: .dockerconfigjson
+        path: config.json
+"""
+        }
+    }
 
     environment {
-        // You must set the following environment variables
-        // ORGANIZATION_NAME
-        // DOCKERHUB_USERNAME (it doesn't matter if you don't have one)
         SERVICE_NAME = "config-server"
         IMAGE_NAME = "config-server-miyembro"
         IMAGE_TAG = "${IMAGE_NAME}:${BUILD_NUMBER}"
         REPOSITORY_TAG = "${DOCKERHUB_USERNAME}/${IMAGE_TAG}"
-        DOCKER_HUB_CREDS = credentials('miyembro-docker-token')  // Use the ID of your Docker Hub credentials
+        DOCKER_HUB_CREDS = credentials('miyembro-docker-token')
     }
 
     stages {
-         stage('Check Docker') {
+        stage('Preparation') {
             steps {
-                script {
-                    sh 'docker version'
-                    sh 'docker info'
+                node {
+                    cleanWs()
+                    git credentialsId: 'GitHub', url: "https://github.com/${ORGANIZATION_NAME}/${SERVICE_NAME}", branch: 'main'
+                    sh 'chmod +x gradlew'
                 }
             }
         }
-        stage('Preparation') {
-            steps {
-                cleanWs()  // Clean the workspace
-                git credentialsId: 'GitHub', url: "https://github.com/${ORGANIZATION_NAME}/${SERVICE_NAME}", branch: 'main'  // Clone the repository
-                sh 'chmod +x gradlew'  // Add execute permission to gradlew
-            }
-        }
+
 
         stage('Build') {
             steps {
-                sh './gradlew clean build'  // Build the project using Gradle
+                sh './gradlew clean build'
             }
         }
 
         stage('Build and Push Image') {
             steps {
-                script {
+                container('kaniko') {
+                    script {
+                        echo "REPOSITORY_TAG: ${REPOSITORY_TAG}"
+                        echo "IMAGE_TAG: ${IMAGE_TAG}"
+                        echo "IMAGE_NAME: ${IMAGE_NAME}"
 
-                    echo "REPOSITORY_TAG: ${REPOSITORY_TAG}"
-
-                    echo "IMAGE_TAG: ${IMAGE_TAG}"
-
-                    echo "IMAGE_NAME: ${IMAGE_NAME}"
-
-                    // Authenticate with Docker Hub using the credentials
-                    sh "echo ${DOCKER_HUB_CREDS_PSW} | docker login -u ${DOCKER_HUB_CREDS_USR} --password-stdin"
-
-                    // Build the Docker image
-                    sh "docker image build -t ${IMAGE_NAME} ."
-
-                    // Tag the Docker image for the repository
-                    sh "docker tag ${IMAGE_NAME} ${REPOSITORY_TAG}"
-
-                    // Push the Docker image to Docker Hub
-                    sh "docker push ${REPOSITORY_TAG}"
+                        sh """
+                        /kaniko/executor \
+                            --dockerfile=Dockerfile \
+                            --context=dir:///workspace \
+                            --destination=${REPOSITORY_TAG}
+                        """
+                    }
                 }
             }
         }
 
         stage('Deploy to Cluster') {
             steps {
-                sh 'envsubst < ${WORKSPACE}/deploy.yaml | kubectl apply -f -'  // Deploy to Kubernetes
+                sh 'envsubst < ${WORKSPACE}/deploy.yaml | kubectl apply -f -'
             }
         }
     }
 
     post {
         always {
-            cleanWs()  // Clean the workspace
+            node {
+                cleanWs()
+            }
         }
         success {
             echo "Pipeline succeeded!"
