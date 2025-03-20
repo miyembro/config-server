@@ -15,7 +15,7 @@ spec:
       args:
         - --context=dir:///workspace
         - --dockerfile=/workspace/Dockerfile
-        - --destination=docker.io/${DOCKERHUB_USERNAME}/config-server-miyembro:${BUILD_NUMBER}
+        - --destination=docker.io/${DOCKERHUB_USERNAME}/config-server:${BUILD_NUMBER}
       tty: true
       volumeMounts:
         - name: kaniko-secret
@@ -58,7 +58,7 @@ spec:
                     script {
                         // Debugging logs for Kaniko container
                         sh 'echo "Running Kaniko build..."'
-                        sh '/kaniko/executor --context=dir:///workspace --dockerfile=/workspace/Dockerfile --destination=docker.io/${DOCKERHUB_USERNAME}/config-server-miyembro:${BUILD_NUMBER}'
+                        sh '/kaniko/executor --context=dir:///workspace --dockerfile=/workspace/Dockerfile --destination=docker.io/${DOCKERHUB_USERNAME}/config-server:${BUILD_NUMBER}'
                     }
                 }
             }
