@@ -1,7 +1,7 @@
 pipeline {
     agent {
         kubernetes {
-yaml """
+            yaml """
 apiVersion: v1
 kind: Pod
 spec:
@@ -13,7 +13,7 @@ spec:
       mountPath: /var/jenkins_home
   - name: kaniko
     image: gcr.io/kaniko-project/executor:latest
-    args: ["--dockerfile=Dockerfile", "--context=dir:///workspace", "--destination=${env.REPOSITORY_TAG}"]
+    args: ["--dockerfile=Dockerfile", "--context=dir:///workspace", "--destination=\${env.REPOSITORY_TAG}"]
     volumeMounts:
     - name: workspace
       mountPath: /workspace
@@ -33,22 +33,22 @@ spec:
     }
 
     environment {
-        // You must set the following environment variables
-        // ORGANIZATION_NAME
-        // DOCKERHUB_USERNAME (it doesn't matter if you don't have one)
+        // Required environment variables
         SERVICE_NAME = "config-server"
         IMAGE_NAME = "config-server-miyembro"
         IMAGE_TAG = "${IMAGE_NAME}:${BUILD_NUMBER}"
         REPOSITORY_TAG = "${DOCKERHUB_USERNAME}/${IMAGE_TAG}"
-        DOCKER_HUB_CREDS = credentials('miyembro-docker-token')  // Use the ID of your Docker Hub credentials
+        DOCKER_HUB_CREDS = credentials('miyembro-docker-token')  // Use your Docker Hub credentials ID
     }
 
     stages {
         stage('Preparation') {
             steps {
-                cleanWs()  // Clean the workspace
-                git credentialsId: 'GitHub', url: "https://github.com/${ORGANIZATION_NAME}/${SERVICE_NAME}", branch: 'main'  // Clone the repository
-                sh 'chmod +x gradlew'  // Add execute permission to gradlew
+                node {
+                    cleanWs()  // Clean the workspace
+                }
+                git credentialsId: 'GitHub', url: "https://github.com/${ORGANIZATION_NAME}/${SERVICE_NAME}", branch: 'main'
+                sh 'chmod +x gradlew'  // Ensure Gradle wrapper is executable
             }
         }
 
@@ -66,7 +66,7 @@ spec:
                         echo "IMAGE_TAG: ${IMAGE_TAG}"
                         echo "IMAGE_NAME: ${IMAGE_NAME}"
 
-                        // Kaniko will build and push the Docker image in one step
+                        // Kaniko builds and pushes the image
                         sh """
                         /kaniko/executor \
                             --dockerfile=Dockerfile \
@@ -87,7 +87,7 @@ spec:
 
     post {
         always {
-            script {
+            node {
                 cleanWs()
             }
         }
@@ -98,5 +98,4 @@ spec:
             echo "Pipeline failed!"
         }
     }
-
 }
