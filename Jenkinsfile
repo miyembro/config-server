@@ -1,34 +1,34 @@
 pipeline {
     agent {
         kubernetes {
-            yaml """
-			apiVersion: v1
-			kind: Pod
-			spec:
-			  containers:
-			  - name: jenkins
-				image: arjayfuentes24/miyembro-jenkins:latest
-				volumeMounts:
-				- name: workspace
-				  mountPath: /var/jenkins_home
-			  - name: kaniko
-				image: gcr.io/kaniko-project/executor:latest
-				args: ["--dockerfile=Dockerfile", "--context=dir:///workspace", "--destination=${env.REPOSITORY_TAG}"]
-				volumeMounts:
-				- name: workspace
-				  mountPath: /workspace
-				- name: secret-volume
-				  mountPath: /kaniko/.docker
-			  volumes:
-			  - name: workspace
-				emptyDir: {}
-			  - name: secret-volume
-				secret:
-				  secretName: regcred
-				  items:
-				  - key: .dockerconfigjson
-					path: config.json
-			"""
+yaml """
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - name: jenkins
+    image: arjayfuentes24/miyembro-jenkins:latest
+    volumeMounts:
+    - name: workspace
+      mountPath: /var/jenkins_home
+  - name: kaniko
+    image: gcr.io/kaniko-project/executor:latest
+    args: ["--dockerfile=Dockerfile", "--context=dir:///workspace", "--destination=${env.REPOSITORY_TAG}"]
+    volumeMounts:
+    - name: workspace
+      mountPath: /workspace
+    - name: secret-volume
+      mountPath: /kaniko/.docker
+  volumes:
+  - name: workspace
+    emptyDir: {}
+  - name: secret-volume
+    secret:
+      secretName: regcred
+      items:
+      - key: .dockerconfigjson
+        path: config.json
+"""
         }
     }
 
@@ -87,7 +87,9 @@ pipeline {
 
     post {
         always {
-            cleanWs()  // Clean the workspace
+            node {
+                cleanWs()  // Clean the workspace
+            }
         }
         success {
             echo "Pipeline succeeded!"
