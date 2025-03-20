@@ -11,19 +11,19 @@ spec:
     - name: kaniko
       image: gcr.io/kaniko-project/executor:latest
       command:
-        - /kaniko/executor  # Correct entry point for Kaniko
+        - /kaniko/executor  # Kaniko entry point
       args:
-        - --context=dir:///workspace  # Use the workspace directory as the build context
-        - --dockerfile=/workspace/Dockerfile  # Specify the Dockerfile location
-        - --destination=docker.io/${DOCKERHUB_USERNAME}/config-server-miyembro:${BUILD_NUMBER}  # Destination for the image
+        - --context=dir:///workspace
+        - --dockerfile=/workspace/Dockerfile
+        - --destination=docker.io/${DOCKERHUB_USERNAME}/config-server-miyembro:${BUILD_NUMBER}
       tty: true
       volumeMounts:
         - name: kaniko-secret
-          mountPath: /kaniko/.docker/  # Mount the Docker credentials to the Kaniko container
+          mountPath: /kaniko/.docker/  # Mount Docker credentials
   volumes:
     - name: kaniko-secret
       secret:
-        secretName: docker-hub-secret  # Docker Hub secret for authentication
+        secretName: docker-hub-secret  # Ensure this secret exists and is correct
 """
         }
     }
@@ -55,12 +55,11 @@ spec:
         stage('Build and Push Image with Kaniko') {
             steps {
                 container('kaniko') {
-                    sh '''
-                    /kaniko/executor \
-                      --context=dir:///workspace \
-                      --dockerfile=/workspace/Dockerfile \
-                      --destination=docker.io/${DOCKERHUB_USERNAME}/config-server-miyembro:${BUILD_NUMBER}
-                    '''
+                    script {
+                        // Debugging logs for Kaniko container
+                        sh 'echo "Running Kaniko build..."'
+                        sh '/kaniko/executor --context=dir:///workspace --dockerfile=/workspace/Dockerfile --destination=docker.io/${DOCKERHUB_USERNAME}/config-server-miyembro:${BUILD_NUMBER}'
+                    }
                 }
             }
         }
@@ -74,7 +73,12 @@ spec:
 
     post {
         always {
-            cleanWs()
+            script {
+                // Ensure cleanWs() is wrapped in a node context
+                node {
+                    cleanWs()
+                }
+            }
         }
         success {
             echo "Pipeline succeeded!"
