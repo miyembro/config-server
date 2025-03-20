@@ -33,28 +33,27 @@ spec:
     }
 
     environment {
-        // Required environment variables
         SERVICE_NAME = "config-server"
         IMAGE_NAME = "config-server-miyembro"
         IMAGE_TAG = "${IMAGE_NAME}:${BUILD_NUMBER}"
         REPOSITORY_TAG = "${DOCKERHUB_USERNAME}/${IMAGE_TAG}"
-        DOCKER_HUB_CREDS = credentials('miyembro-docker-token')  // Use your Docker Hub credentials ID
+        DOCKER_HUB_CREDS = credentials('miyembro-docker-token')
     }
 
     stages {
         stage('Preparation') {
             steps {
                 node {
-                    cleanWs()  // Clean the workspace
+                    cleanWs()
+                    git credentialsId: 'GitHub', url: "https://github.com/${ORGANIZATION_NAME}/${SERVICE_NAME}", branch: 'main'
+                    sh 'chmod +x gradlew'
                 }
-                git credentialsId: 'GitHub', url: "https://github.com/${ORGANIZATION_NAME}/${SERVICE_NAME}", branch: 'main'
-                sh 'chmod +x gradlew'  // Ensure Gradle wrapper is executable
             }
         }
 
         stage('Build') {
             steps {
-                sh './gradlew clean build'  // Build the project using Gradle
+                sh './gradlew clean build'
             }
         }
 
@@ -66,7 +65,6 @@ spec:
                         echo "IMAGE_TAG: ${IMAGE_TAG}"
                         echo "IMAGE_NAME: ${IMAGE_NAME}"
 
-                        // Kaniko builds and pushes the image
                         sh """
                         /kaniko/executor \
                             --dockerfile=Dockerfile \
@@ -80,7 +78,7 @@ spec:
 
         stage('Deploy to Cluster') {
             steps {
-                sh 'envsubst < ${WORKSPACE}/deploy.yaml | kubectl apply -f -'  // Deploy to Kubernetes
+                sh 'envsubst < ${WORKSPACE}/deploy.yaml | kubectl apply -f -'
             }
         }
     }
