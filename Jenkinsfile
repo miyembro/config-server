@@ -43,9 +43,7 @@ spec:
     stages {
         stage('Preparation') {
             steps {
-                node('any') {
-                    cleanWs()
-                }
+                cleanWs()  // Clean workspace (no need for node())
                 git credentialsId: 'GitHub', url: "https://github.com/${ORGANIZATION_NAME}/${SERVICE_NAME}", branch: 'main'
                 sh 'chmod +x gradlew'  // Ensure Gradle wrapper is executable
             }
@@ -86,9 +84,7 @@ spec:
 
     post {
         always {
-           node('any') {
-               cleanWs()
-           }
+            cleanWs()  // Cleanup workspace (no need for node())
         }
         success {
             echo "Pipeline succeeded!"
