@@ -50,17 +50,15 @@ spec:
 
         stage('Build and Push Image with Kaniko') {
             steps {
-                container('kaniko') {  // Run commands inside the Kaniko container
-                    script {
-                        sh '''
-                        /kaniko/executor \
-                        --context `pwd` \
-                        --dockerfile `pwd`/Dockerfile \
-                        --destination=${REPOSITORY_TAG} \
-                        --cache=true
-                        '''
-                    }
+                container('kaniko') {
+                    sh '''
+                    /kaniko/executor \
+                      --context=dir:///workspace \
+                      --dockerfile=/workspace/Dockerfile \
+                      --destination=docker.io/${DOCKERHUB_USERNAME}/config-server-miyembro:${BUILD_NUMBER}
+                    '''
                 }
+
             }
         }
 
