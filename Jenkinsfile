@@ -10,13 +10,6 @@ spec:
   containers:
     - name: kaniko
       image: gcr.io/kaniko-project/executor:latest
-      command:
-        - /kaniko/executor  # Kaniko entry point
-      args:
-        - --context=dir:///workspace
-        - --dockerfile=/workspace/Dockerfile
-        - --destination=docker.io/${DOCKERHUB_USERNAME}/config-server:${BUILD_NUMBER}
-      tty: true
       volumeMounts:
         - name: kaniko-secret
           mountPath: /kaniko/.docker/  # Mount Docker credentials
