@@ -1,47 +1,85 @@
 pipeline {
-
-  agent {
-    kubernetes {
-      yamlFile 'kaniko-builder.yaml'
-    }
-  }
-
-  environment {
-          // You must set the following environment variables
-          // ORGANIZATION_NAME
-          // DOCKERHUB_USERNAME (it doesn't matter if you don't have one)
-          SERVICE_NAME = "config-server"
-          IMAGE_NAME = "config-server-miyembro"
-          IMAGE_NAME_AND_USER = "${DOCKERHUB_USERNAME}/${IMAGE_NAME}"
-          IMAGE_TAG = "${IMAGE_NAME}:${BUILD_NUMBER}"
-          REPOSITORY_TAG = "${DOCKERHUB_USERNAME}/${IMAGE_TAG}"
-          DOCKER_HUB_CREDS = credentials('miyembro-docker-token')  // Use the ID of your Docker Hub credentials
-      }
-
-  stages {
-
-    stage("Cleanup Workspace") {
-      steps {
-        cleanWs()
-      }
+    agent {
+        kubernetes {
+            yaml """
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kaniko-agent
+spec:
+  containers:
+    - name: kaniko
+      image: gcr.io/kaniko-project/executor:latest
+      command:
+        - /busybox/cat
+      tty: true
+      volumeMounts:
+        - name: kaniko-secret
+          mountPath: /kaniko/.docker/
+  volumes:
+    - name: kaniko-secret
+      secret:
+        secretName: aws-ecr-secret
+"""
+        }
     }
 
-    stage("Checkout from SCM"){
+    environment {
+        ORGANIZATION_NAME = "miyembro"
+        SERVICE_NAME = "config-server"
+        IMAGE_NAME = "config-server-miyembro"
+        IMAGE_TAG = "${IMAGE_NAME}:${BUILD_NUMBER}"
+        REPOSITORY_TAG = "your-dockerhub-username/${IMAGE_TAG}"
+        DOCKER_HUB_CREDS = credentials('miyembro-docker-token')  // Docker Hub Credentials
+    }
+
+    stages {
+        stage('Preparation') {
             steps {
-                git branch: 'main', credentialsId: 'github', url: 'https://github.com/${ORGANIZATION_NAME}/${SERVICE_NAME}'
+                cleanWs()
+                git credentialsId: 'GitHub', url: "https://github.com/${ORGANIZATION_NAME}/${SERVICE_NAME}", branch: 'main'
+                sh 'chmod +x gradlew'
             }
-
         }
 
-    stage('Build & Push with Kaniko') {
-      steps {
-        container(name: 'kaniko', shell: '/busybox/sh') {
-          sh '''#!/busybox/sh
-
-            /kaniko/executor --dockerfile `pwd`/Dockerfile --context `pwd` --destination=${REPOSITORY_TAG} --destination=${IMAGE_NAME_AND_USER}:latest
-          '''
+        stage('Build') {
+            steps {
+                sh './gradlew clean build'
+            }
         }
-      }
+
+        stage('Build and Push Image with Kaniko') {
+            steps {
+                container('kaniko') {  // Run commands inside the Kaniko container
+                    script {
+                        sh '''
+                        /kaniko/executor \
+                        --context `pwd` \
+                        --dockerfile `pwd`/Dockerfile \
+                        --destination=${REPOSITORY_TAG} \
+                        --cache=true
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('Deploy to Cluster') {
+            steps {
+                sh 'envsubst < ${WORKSPACE}/deploy.yaml | kubectl apply -f -'
+            }
+        }
     }
-  }
+
+    post {
+        always {
+            cleanWs()
+        }
+        success {
+            echo "Pipeline succeeded!"
+        }
+        failure {
+            echo "Pipeline failed!"
+        }
+    }
 }
