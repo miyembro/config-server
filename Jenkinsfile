@@ -56,6 +56,9 @@ spec:
             steps {
                 container('kaniko') {
                     script {
+                                        sh 'echo "Running Kaniko build..."'
+                sh 'echo "DOCKERHUB_USERNAME=${DOCKERHUB_USERNAME}"'
+                sh 'echo "BUILD_NUMBER=${BUILD_NUMBER}"'
                         // Debugging logs for Kaniko container
                         sh 'echo "Running Kaniko build..."'
                         sh '/kaniko/executor --context=dir:///workspace --dockerfile=/workspace/Dockerfile --destination=docker.io/${DOCKERHUB_USERNAME}/config-server:${BUILD_NUMBER}'
