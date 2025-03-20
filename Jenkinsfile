@@ -11,15 +11,19 @@ spec:
     - name: kaniko
       image: gcr.io/kaniko-project/executor:latest
       command:
-        - /busybox/cat
+        - /kaniko/executor  # Correct entry point for Kaniko
+      args:
+        - --context=dir:///workspace  # Use the workspace directory as the build context
+        - --dockerfile=/workspace/Dockerfile  # Specify the Dockerfile location
+        - --destination=docker.io/${DOCKERHUB_USERNAME}/config-server-miyembro:${BUILD_NUMBER}  # Destination for the image
       tty: true
       volumeMounts:
         - name: kaniko-secret
-          mountPath: /kaniko/.docker/
+          mountPath: /kaniko/.docker/  # Mount the Docker credentials to the Kaniko container
   volumes:
     - name: kaniko-secret
       secret:
-        secretName: docker-hub-secret
+        secretName: docker-hub-secret  # Docker Hub secret for authentication
 """
         }
     }
@@ -29,7 +33,7 @@ spec:
         SERVICE_NAME = "config-server"
         IMAGE_NAME = "config-server-miyembro"
         IMAGE_TAG = "${IMAGE_NAME}:${BUILD_NUMBER}"
-        REPOSITORY_TAG = "your-dockerhub-username/${IMAGE_TAG}"
+        REPOSITORY_TAG = "${DOCKERHUB_USERNAME}/${IMAGE_TAG}"
         DOCKER_HUB_CREDS = credentials('miyembro-docker-token')  // Docker Hub Credentials
     }
 
@@ -58,7 +62,6 @@ spec:
                       --destination=docker.io/${DOCKERHUB_USERNAME}/config-server-miyembro:${BUILD_NUMBER}
                     '''
                 }
-
             }
         }
 
