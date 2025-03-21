@@ -76,7 +76,6 @@ pipeline {
             }
         }
 
-
         stage('Deploy to Cluster') {
             steps {
                 sh 'envsubst < ${WORKSPACE}/deploy.yaml | kubectl apply -f -'  // Deploy to Kubernetes
