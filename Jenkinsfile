@@ -15,8 +15,11 @@ pipeline {
         stage('Check Buildah') {
             steps {
                 script {
-                    sh 'buildah --version'
-                    sh 'buildah info'
+                    // Run Buildah commands inside the Buildah container
+                    container('buildah') {
+                        sh 'buildah --version'
+                        sh 'buildah info'
+                    }
                 }
             }
         }
@@ -42,17 +45,20 @@ pipeline {
                     echo "IMAGE_TAG: ${IMAGE_TAG}"
                     echo "IMAGE_NAME: ${IMAGE_NAME}"
 
-                    // Build the image using Buildah
-                    sh "buildah bud -t ${IMAGE_NAME} ."
+                    // Run Buildah commands inside the Buildah container
+                    container('buildah') {
+                        // Build the image using Buildah
+                        sh "buildah bud -t ${IMAGE_NAME} ."
 
-                    // Tag the image
-                    sh "buildah tag ${IMAGE_NAME} ${REPOSITORY_TAG}"
+                        // Tag the image
+                        sh "buildah tag ${IMAGE_NAME} ${REPOSITORY_TAG}"
 
-                    // Authenticate (if needed)
-                    sh "buildah login -u ${DOCKER_HUB_CREDS_USR} -p ${DOCKER_HUB_CREDS} quay.io"
+                        // Authenticate (if needed)
+                        sh "buildah login -u ${DOCKER_HUB_CREDS_USR} -p ${DOCKER_HUB_CREDS} quay.io"
 
-                    // Push the image
-                    sh "buildah push ${REPOSITORY_TAG}"
+                        // Push the image
+                        sh "buildah push ${REPOSITORY_TAG}"
+                    }
                 }
             }
         }
