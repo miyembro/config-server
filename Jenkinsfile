@@ -1,73 +1,64 @@
 pipeline {
-    agent {
-        kubernetes {
-            inheritFrom 'jenkins-agent'  // Use the predefined pod template in Jenkins cloud config
-            defaultContainer 'jenkins'  // Use the default container for Jenkins tasks
-        }
-    }
+    agent any
 
     environment {
+        // You must set the following environment variables
+        // ORGANIZATION_NAME
+        // DOCKERHUB_USERNAME (it doesn't matter if you don't have one)
         SERVICE_NAME = "config-server"
         IMAGE_NAME = "config-server-miyembro"
         IMAGE_TAG = "${IMAGE_NAME}:${BUILD_NUMBER}"
-        REPOSITORY_TAG = "docker.io/${DOCKERHUB_USERNAME}/${IMAGE_TAG}"
-        DOCKER_HUB_CREDS_USR = "arjayfuentes24"
-        DOCKER_HUB_CREDS = credentials('miyembro-docker-token')
+        REPOSITORY_TAG = "${DOCKERHUB_USERNAME}/${IMAGE_TAG}"
+        DOCKER_HUB_CREDS = credentials('miyembro-docker-token')  // Use the ID of your Docker Hub credentials
     }
 
     stages {
         stage('Preparation') {
             steps {
-                cleanWs()
-                git credentialsId: 'GitHub', url: "https://github.com/${ORGANIZATION_NAME}/${SERVICE_NAME}", branch: 'main'
-                sh 'chmod +x gradlew'
-            }
-        }
-
-        stage('Check Buildah') {
-            steps {
-                container('buildah') {
-                    script {
-                        sh 'buildah --version'
-                        sh 'buildah info'
-                    }
-                }
+                cleanWs()  // Clean the workspace
+                git credentialsId: 'GitHub', url: "https://github.com/${ORGANIZATION_NAME}/${SERVICE_NAME}", branch: 'main'  // Clone the repository
+                sh 'chmod +x gradlew'  // Add execute permission to gradlew
             }
         }
 
         stage('Build') {
             steps {
-                sh './gradlew clean build'
+                sh './gradlew clean build'  // Build the project using Gradle
             }
         }
 
-        stage('Build and Push Image with Buildah') {
+        stage('Build and Push Image') {
             steps {
-                container('buildah') {
-                    script {
-                        echo "REPOSITORY_TAG: ${REPOSITORY_TAG}"
-                        echo "IMAGE_TAG: ${IMAGE_TAG}"
-                        echo "IMAGE_NAME: ${IMAGE_NAME}"
+                script {
+                    echo "REPOSITORY_TAG: ${REPOSITORY_TAG}"
+                    echo "IMAGE_TAG: ${IMAGE_TAG}"
+                    echo "IMAGE_NAME: ${IMAGE_NAME}"
 
-                        sh "buildah bud -t ${IMAGE_NAME} ."
-                        sh "buildah tag ${IMAGE_NAME} ${REPOSITORY_TAG}"
-                        sh "buildah login -u ${DOCKER_HUB_CREDS_USR} -p ${DOCKER_HUB_CREDS} docker.io"
-                        sh "buildah push ${REPOSITORY_TAG}"
-                    }
+                    // Authenticate with Docker Hub using Buildah
+                    sh "buildah login -u ${DOCKER_HUB_CREDS_USR} -p ${DOCKER_HUB_CREDS_PSW} docker.io"
+
+                    // Build the container image using Buildah
+                    sh "buildah bud -t ${IMAGE_NAME} ."
+
+                    // Tag the container image for the repository
+                    sh "buildah tag ${IMAGE_NAME} ${REPOSITORY_TAG}"
+
+                    // Push the container image to Docker Hub
+                    sh "buildah push ${REPOSITORY_TAG}"
                 }
             }
         }
 
         stage('Deploy to Cluster') {
             steps {
-                sh 'envsubst < ${WORKSPACE}/deploy.yaml | kubectl apply -f -'
+                sh 'envsubst < ${WORKSPACE}/deploy.yaml | kubectl apply -f -'  // Deploy to Kubernetes
             }
         }
     }
 
     post {
         always {
-            cleanWs()
+            cleanWs()  // Clean the workspace
         }
         success {
             echo "Pipeline succeeded!"
