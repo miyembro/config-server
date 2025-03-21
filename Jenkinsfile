@@ -1,21 +1,21 @@
 pipeline {
     agent {
         kubernetes {
-            label 'jenkins-agent'
-            defaultContainer 'buildah' // Define the container inside the Kubernetes pod
+            label 'jenkins-agent'  // Make sure this label matches your Kubernetes pod template
+            defaultContainer 'buildah' // Use 'buildah' container as the default
             yaml """
 apiVersion: v1
 kind: Pod
 metadata:
-  name: jenkins-agent
+name: jenkins-agent
 spec:
-  containers:
-  - name: buildah
-    image: quay.io/buildah/buildah  // Replace this with the image for Buildah
-    command:
-      - cat
-    tty: true
-  """
+containers:
+- name: buildah
+ image: quay.io/buildah/buildah:latest  // Make sure the image exists
+ command:
+   - cat
+ tty: true
+"""
         }
     }
     environment {
@@ -23,14 +23,14 @@ spec:
         IMAGE_NAME = "config-server-miyembro"
         IMAGE_TAG = "${IMAGE_NAME}:${BUILD_NUMBER}"
         REPOSITORY_TAG = "docker.io/${DOCKERHUB_USERNAME}/${IMAGE_TAG}"  // Docker Hub registry
-        DOCKER_HUB_CREDS_USR = "arjayfuentes24"  // Your Docker Hub username
-        DOCKER_HUB_CREDS = credentials('miyembro-docker-token')  // Docker Hub credentials stored in Jenkins
+        DOCKER_HUB_CREDS_USR = "arjayfuentes24"
+        DOCKER_HUB_CREDS = credentials('miyembro-docker-token')  // Docker Hub credentials
     }
 
     stages {
         stage('Check Buildah') {
             steps {
-                container('buildah') {  // Use the buildah container for this stage
+                container('buildah') {  // Use the 'buildah' container for this stage
                     script {
                         sh 'buildah --version'
                         sh 'buildah info'
@@ -41,21 +41,21 @@ spec:
 
         stage('Preparation') {
             steps {
-                cleanWs()  // Clean workspace
+                cleanWs()
                 git credentialsId: 'GitHub', url: "https://github.com/${ORGANIZATION_NAME}/${SERVICE_NAME}", branch: 'main'
-                sh 'chmod +x gradlew'  // Ensure Gradlew is executable
+                sh 'chmod +x gradlew'
             }
         }
 
         stage('Build') {
             steps {
-                sh './gradlew clean build'  // Build project using Gradle
+                sh './gradlew clean build'
             }
         }
 
         stage('Build and Push Image with Buildah') {
             steps {
-                container('buildah') {  // Use the buildah container for this stage
+                container('buildah') {
                     script {
                         echo "REPOSITORY_TAG: ${REPOSITORY_TAG}"
                         echo "IMAGE_TAG: ${IMAGE_TAG}"
@@ -79,14 +79,14 @@ spec:
 
         stage('Deploy to Cluster') {
             steps {
-                sh 'envsubst < ${WORKSPACE}/deploy.yaml | kubectl apply -f -'  // Deploy to Kubernetes
+                sh 'envsubst < ${WORKSPACE}/deploy.yaml | kubectl apply -f -'
             }
         }
     }
 
     post {
         always {
-            cleanWs()  // Clean the workspace
+            cleanWs()
         }
         success {
             echo "Pipeline succeeded!"
