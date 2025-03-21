@@ -72,7 +72,7 @@ pipeline {
 //                     } else {
 //                         echo 'No older images to remove.'
 //                     }
-                }
+//                }
             }
         }
 
