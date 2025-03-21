@@ -13,6 +13,15 @@ pipeline {
     }
 
     stages {
+        stage('Debug') {
+    steps {
+        script {
+            sh 'pwd'
+            sh 'ls -la'
+            sh 'git --version'
+        }
+    }
+}
         stage('Preparation') {
             steps {
                 cleanWs()  // Clean the workspace
