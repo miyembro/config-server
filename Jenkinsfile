@@ -1,5 +1,10 @@
 pipeline {
-    agent none  // We're specifying the agent at the stage level
+    agent {
+        kubernetes {
+            inheritFrom 'jenkins-agent'  // Use the predefined pod template in Jenkins cloud config
+            defaultContainer 'jenkins'  // Use the default container for Jenkins tasks
+        }
+    }
 
     environment {
         SERVICE_NAME = "config-server"
@@ -12,25 +17,6 @@ pipeline {
 
     stages {
         stage('Preparation') {
-            agent {
-                kubernetes {
-                    label 'jenkins-agent'
-                    defaultContainer 'buildah'
-                    yaml """
-apiVersion: v1
-kind: Pod
-metadata:
-  name: jenkins-agent
-spec:
-  containers:
-  - name: buildah
-    image: quay.io/buildah/buildah:latest
-    command:
-      - cat
-    tty: true
-"""
-                }
-            }
             steps {
                 cleanWs()
                 git credentialsId: 'GitHub', url: "https://github.com/${ORGANIZATION_NAME}/${SERVICE_NAME}", branch: 'main'
@@ -39,12 +25,6 @@ spec:
         }
 
         stage('Check Buildah') {
-            agent {
-                kubernetes {
-                    label 'jenkins-agent'
-                    defaultContainer 'buildah'
-                }
-            }
             steps {
                 container('buildah') {
                     script {
@@ -56,24 +36,12 @@ spec:
         }
 
         stage('Build') {
-            agent {
-                kubernetes {
-                    label 'jenkins-agent'
-                    defaultContainer 'buildah'
-                }
-            }
             steps {
                 sh './gradlew clean build'
             }
         }
 
         stage('Build and Push Image with Buildah') {
-            agent {
-                kubernetes {
-                    label 'jenkins-agent'
-                    defaultContainer 'buildah'
-                }
-            }
             steps {
                 container('buildah') {
                     script {
@@ -91,12 +59,6 @@ spec:
         }
 
         stage('Deploy to Cluster') {
-            agent {
-                kubernetes {
-                    label 'jenkins-agent'
-                    defaultContainer 'buildah'
-                }
-            }
             steps {
                 sh 'envsubst < ${WORKSPACE}/deploy.yaml | kubectl apply -f -'
             }
