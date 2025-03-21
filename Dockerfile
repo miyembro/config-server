@@ -15,3 +15,4 @@ EXPOSE 8888
 
 # Run the JAR file
 ENTRYPOINT ["java", "-jar", "/app/config-server-miyembro-0.0.1-SNAPSHOT.jar"]
+
