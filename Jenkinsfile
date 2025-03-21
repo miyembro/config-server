@@ -58,7 +58,7 @@ pipeline {
 
         stage('Remove Previous Images') {
             steps {
-                script {
+//                script {
 //                     // Get the image ID of the latest config-server-miyembro image based on creation date
 //                     def latest_image_id = sh(script: '''buildah images --format '{{.ID}} {{.Repository}}:{{.Tag}} {{.CreatedAt}}' | grep 'config-server-miyembro' | sort -k3 -r | head -n 1 | awk '{print \$1}' ''', returnStdout: true).trim()
 //
