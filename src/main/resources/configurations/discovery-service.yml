@@ -9,5 +9,5 @@ eureka:
 
 server:
   port: 8761
-#  servlet:
-#    context-path: /eureka
+  servlet:
+    context-path: /eureka
