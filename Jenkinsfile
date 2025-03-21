@@ -1,8 +1,31 @@
 pipeline {
-    agent any
+    agent {
+        kubernetes {
+            label 'buildah-agent' // Label the pod
+            defaultContainer 'buildah' // Set the Buildah container as the default for commands
+            yaml """
+apiVersion: v1
+kind: Pod
+metadata:
+  name: jenkins-pod
+spec:
+  containers:
+    - name: buildah
+      image: quay.io/buildah/stable
+      securityContext:
+        privileged: true  # Required for Buildah to work
+      command: ["sleep", "infinity"]
+      volumeMounts:
+        - name: containers-storage
+          mountPath: /var/lib/containers  # Shared storage for Buildah
+  volumes:
+    - name: containers-storage
+      emptyDir: {}  # Ephemeral storage for Buildah
+"""
+        }
+    }
 
     environment {
-        // Environment variables
         SERVICE_NAME = "config-server"
         IMAGE_NAME = "config-server-miyembro"
         IMAGE_TAG = "${IMAGE_NAME}:${BUILD_NUMBER}"
@@ -15,7 +38,6 @@ pipeline {
         stage('Check Buildah') {
             steps {
                 script {
-                    // Run Buildah commands inside the Buildah container
                     container('buildah') {
                         sh 'buildah --version'
                         sh 'buildah info'
