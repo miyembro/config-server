@@ -52,17 +52,19 @@ pipeline {
 
                     // Push the container image to Docker Hub
                     sh "buildah push ${REPOSITORY_TAG}"
-
-                    // Cleanup old images (optional, remove the previous images)
-                    sh "buildah rmi ${IMAGE_NAME} || true"
-                    // Removes the local image with the same name (if it exists)
-                    sh "buildah rmi \$(buildah images -q --filter 'dangling=true') || true"
-
-
-                    // Removes dangling (unused) images
                 }
             }
         }
+
+       stage('Remove Previous Image') {
+                   steps {
+                       script {
+                           // Remove the previous image if it exists
+                           echo "Removing previous image if exists: ${IMAGE_NAME}"
+                           sh "buildah rmi ${IMAGE_NAME} || true"
+                       }
+                   }
+               }
 
         stage('Deploy to Cluster') {
             steps {
