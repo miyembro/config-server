@@ -56,15 +56,22 @@ pipeline {
             }
         }
 
-       stage('Remove Previous Image') {
-                   steps {
-                       script {
-                           // Remove the previous image if it exists
-                           echo "Removing previous image if exists: ${IMAGE_NAME}"
-                           sh "buildah rmi ${IMAGE_NAME} || true"
-                       }
-                   }
-               }
+              stage('Remove Previous Image') {
+                  steps {
+                      script {
+                          // Remove the previous image if it exists
+                          echo "Removing previous image if exists: ${IMAGE_NAME}"
+
+                          // First, list all images to verify if the image exists
+                          sh "buildah images ${IMAGE_NAME}"
+
+                          // Remove the image if it exists
+                          sh """
+                              buildah rmi -f ${IMAGE_NAME} || true
+                          """
+                      }
+                  }
+              }
 
         stage('Deploy to Cluster') {
             steps {
