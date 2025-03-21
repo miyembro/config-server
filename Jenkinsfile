@@ -56,7 +56,8 @@ pipeline {
                     // Cleanup old images (optional, remove the previous images)
                     sh "buildah rmi ${IMAGE_NAME} || true"
                     // Removes the local image with the same name (if it exists)
-                    sh "buildah rmi \$\(buildah images -q --filter 'dangling=true'\) || true"
+                    sh "buildah rmi \$(buildah images -q --filter 'dangling=true') || true"
+
 
                     // Removes dangling (unused) images
                 }
