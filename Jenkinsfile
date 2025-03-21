@@ -60,10 +60,10 @@ pipeline {
             steps {
                 script {
                     // Get the image ID of the latest config-server-miyembro image based on creation date
-                    def latest_image_id = sh(script: "buildah images --format '{{.ID}} {{.Repository}}:{{.Tag}} {{.CreatedAt}}' | grep 'config-server-miyembro' | sort -k3 -r | head -n 1 | awk '{print \$1}'", returnStdout: true).trim()
+                    def latest_image_id = sh(script: '''buildah images --format '{{.ID}} {{.Repository}}:{{.Tag}} {{.CreatedAt}}' | grep 'config-server-miyembro' | sort -k3 -r | head -n 1 | awk '{print \$1}' ''', returnStdout: true).trim()
 
                     // List all config-server-miyembro image IDs except the latest one
-                    def image_ids = sh(script: "buildah images --format '{{.ID}} {{.Repository}}:{{.Tag}}' | grep 'config-server-miyembro' | awk '{print \$1}' | grep -v '^${latest_image_id}$'", returnStdout: true).trim()
+                    def image_ids = sh(script: """buildah images --format '{{.ID}} {{.Repository}}:{{.Tag}}' | grep 'config-server-miyembro' | awk '{print \$1}' | grep -v '^${latest_image_id}$'""", returnStdout: true).trim()
 
                     // Remove older images
                     if (image_ids) {
