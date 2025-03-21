@@ -1,5 +1,5 @@
 # Use an official OpenJDK runtime as a parent image
-FROM openjdk:21-jdk-buster
+FROM docker.io/library/openjdk:21-jdk
 
 # Set the working directory in the container
 #working directory
