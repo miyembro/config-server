@@ -10,4 +10,4 @@ eureka:
 server:
   port: 8761
   servlet:
-    context-path: /eureka-dashboard
+    context-path: /eureka
