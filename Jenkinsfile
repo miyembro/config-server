@@ -1,47 +1,21 @@
 pipeline {
-    agent {
-        kubernetes {
-            label 'buildah-agent' // Label the pod
-            defaultContainer 'buildah' // Set the Buildah container as the default for commands
-            yaml """
-apiVersion: v1
-kind: Pod
-metadata:
-  name: jenkins-pod
-spec:
-  containers:
-    - name: buildah
-      image: quay.io/buildah/stable
-      securityContext:
-        privileged: true  # Required for Buildah to work
-      command: ["sleep", "infinity"]
-      volumeMounts:
-        - name: containers-storage
-          mountPath: /var/lib/containers  # Shared storage for Buildah
-  volumes:
-    - name: containers-storage
-      emptyDir: {}  # Ephemeral storage for Buildah
-"""
-        }
-    }
+    agent any
 
     environment {
         SERVICE_NAME = "config-server"
         IMAGE_NAME = "config-server-miyembro"
         IMAGE_TAG = "${IMAGE_NAME}:${BUILD_NUMBER}"
-        REPOSITORY_TAG = "quay.io/${DOCKERHUB_USERNAME}/${IMAGE_TAG}"  // Ensure the registry is correct
-        DOCKER_HUB_CREDS_USR = "arjayfuentes24"
-        DOCKER_HUB_CREDS = credentials('miyembro-docker-token')  // Docker Hub or Quay credentials
+        REPOSITORY_TAG = "docker.io/${DOCKERHUB_USERNAME}/${IMAGE_TAG}"  // Docker Hub registry
+        DOCKER_HUB_CREDS_USR = "arjayfuentes24"  // Your Docker Hub username
+        DOCKER_HUB_CREDS = credentials('miyembro-docker-token')  // Docker Hub credentials stored in Jenkins
     }
 
     stages {
         stage('Check Buildah') {
             steps {
                 script {
-                    container('buildah') {
-                        sh 'buildah --version'
-                        sh 'buildah info'
-                    }
+                    sh 'buildah --version'
+                    sh 'buildah info'
                 }
             }
         }
@@ -67,20 +41,17 @@ spec:
                     echo "IMAGE_TAG: ${IMAGE_TAG}"
                     echo "IMAGE_NAME: ${IMAGE_NAME}"
 
-                    // Run Buildah commands inside the Buildah container
-                    container('buildah') {
-                        // Build the image using Buildah
-                        sh "buildah bud -t ${IMAGE_NAME} ."
+                    // Build the image using Buildah
+                    sh "buildah bud -t ${IMAGE_NAME} ."
 
-                        // Tag the image
-                        sh "buildah tag ${IMAGE_NAME} ${REPOSITORY_TAG}"
+                    // Tag the image
+                    sh "buildah tag ${IMAGE_NAME} ${REPOSITORY_TAG}"
 
-                        // Authenticate (if needed)
-                        sh "buildah login -u ${DOCKER_HUB_CREDS_USR} -p ${DOCKER_HUB_CREDS} quay.io"
+                    // Authenticate with Docker Hub using credentials
+                    sh "buildah login -u ${DOCKER_HUB_CREDS_USR} -p ${DOCKER_HUB_CREDS} docker.io"
 
-                        // Push the image
-                        sh "buildah push ${REPOSITORY_TAG}"
-                    }
+                    // Push the image to Docker Hub
+                    sh "buildah push ${REPOSITORY_TAG}"
                 }
             }
         }
