@@ -1,6 +1,23 @@
 pipeline {
-    agent any
-
+    agent {
+        kubernetes {
+            label 'jenkins-agent'
+            defaultContainer 'buildah' // Define the container inside the Kubernetes pod
+            yaml """
+apiVersion: v1
+kind: Pod
+metadata:
+  name: jenkins-agent
+spec:
+  containers:
+  - name: buildah
+    image: quay.io/buildah/buildah  // Replace this with the image for Buildah
+    command:
+      - cat
+    tty: true
+  """
+        }
+    }
     environment {
         SERVICE_NAME = "config-server"
         IMAGE_NAME = "config-server-miyembro"
