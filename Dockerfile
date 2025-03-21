@@ -1,8 +1,8 @@
 # Use an official OpenJDK runtime as a parent image
-FROM openjdk:21-jdk
+FROM openjdk:21-jdk-buster
 
 # Set the working directory in the container
- #working directory
+#working directory
 WORKDIR /app
 
 # Copy your JAR file from the local machine to the container
