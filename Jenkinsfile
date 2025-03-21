@@ -56,22 +56,25 @@ pipeline {
             }
         }
 
-              stage('Remove Previous Image') {
-                  steps {
-                      script {
-                          // Remove the previous image if it exists
-                          echo "Removing previous image if exists: ${IMAGE_NAME}"
+              stage('Remove Previous Images') {
+                          steps {
+                              script {
+                                  // Get the image ID of the latest config-server-miyembro image based on creation date
+                                  def latest_image_id = sh(script: "buildah images --format '{{.ID}} {{.Repository}}:{{.Tag}} {{.CreatedAt}}' | grep 'config-server-miyembro' | sort -k3 -r | head -n 1 | awk '{print $1}'", returnStdout: true).trim()
 
-                          // First, list all images to verify if the image exists
-                          sh "buildah images ${IMAGE_NAME}"
+                                  // List all config-server-miyembro image IDs except the latest one
+                                  def image_ids = sh(script: "buildah images --format '{{.ID}} {{.Repository}}:{{.Tag}}' | grep 'config-server-miyembro' | awk '{print $1}' | grep -v '^${latest_image_id}$'", returnStdout: true).trim()
 
-                          // Remove the image if it exists
-                          sh """
-                              buildah rmi -f ${IMAGE_NAME} || true
-                          """
+                                  // Remove older images
+                                  if (image_ids) {
+                                      sh "echo 'Removing older images: ${image_ids}'"
+                                      sh "buildah rmi ${image_ids} || true"
+                                  } else {
+                                      echo 'No older images to remove.'
+                                  }
+                              }
+                          }
                       }
-                  }
-              }
 
         stage('Deploy to Cluster') {
             steps {
