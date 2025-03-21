@@ -1,80 +1,72 @@
 pipeline {
-    agent {
-        kubernetes {
-            yaml """
-apiVersion: v1
-kind: Pod
-metadata:
-  name: kaniko-agent
-spec:
-  containers:
-    - name: kaniko
-      image: gcr.io/kaniko-project/executor:latest
-      volumeMounts:
-        - name: kaniko-secret
-          mountPath: /kaniko/.docker/  # Mount Docker credentials
-  volumes:
-    - name: kaniko-secret
-      secret:
-        secretName: docker-hub-secret  # Ensure this secret exists and is correct
-"""
-        }
-    }
+    agent any
 
     environment {
-        ORGANIZATION_NAME = "miyembro"
+        // Environment variables
         SERVICE_NAME = "config-server"
         IMAGE_NAME = "config-server-miyembro"
         IMAGE_TAG = "${IMAGE_NAME}:${BUILD_NUMBER}"
-        REPOSITORY_TAG = "${DOCKERHUB_USERNAME}/${IMAGE_TAG}"
-        DOCKER_HUB_CREDS = credentials('miyembro-docker-token')  // Docker Hub Credentials
+        REPOSITORY_TAG = "quay.io/${DOCKERHUB_USERNAME}/${IMAGE_TAG}"  // Ensure the registry is correct
+        DOCKER_HUB_CREDS_USR = "arjayfuentes24"
+        DOCKER_HUB_CREDS = credentials('miyembro-docker-token')  // Docker Hub or Quay credentials
     }
 
     stages {
+        stage('Check Buildah') {
+            steps {
+                script {
+                    sh 'buildah --version'
+                    sh 'buildah info'
+                }
+            }
+        }
+
         stage('Preparation') {
             steps {
-                cleanWs()
+                cleanWs()  // Clean workspace
                 git credentialsId: 'GitHub', url: "https://github.com/${ORGANIZATION_NAME}/${SERVICE_NAME}", branch: 'main'
-                sh 'chmod +x gradlew'
+                sh 'chmod +x gradlew'  // Ensure Gradlew is executable
             }
         }
 
         stage('Build') {
             steps {
-                sh './gradlew clean build'
+                sh './gradlew clean build'  // Build project using Gradle
             }
         }
 
-        stage('Build and Push Image with Kaniko') {
+        stage('Build and Push Image with Buildah') {
             steps {
-                container('kaniko') {
-                    script {
-                                        sh 'echo "Running Kaniko build..."'
-                sh 'echo "DOCKERHUB_USERNAME=${DOCKERHUB_USERNAME}"'
-                sh 'echo "BUILD_NUMBER=${BUILD_NUMBER}"'
-                        // Debugging logs for Kaniko container
-                        sh 'echo "Running Kaniko build..."'
-                        sh '/kaniko/executor --context=dir:///workspace --dockerfile=/workspace/Dockerfile --destination=docker.io/${DOCKERHUB_USERNAME}/config-server:${BUILD_NUMBER}'
-                    }
+                script {
+                    echo "REPOSITORY_TAG: ${REPOSITORY_TAG}"
+                    echo "IMAGE_TAG: ${IMAGE_TAG}"
+                    echo "IMAGE_NAME: ${IMAGE_NAME}"
+
+                    // Build the image using Buildah
+                    sh "buildah bud -t ${IMAGE_NAME} ."
+
+                    // Tag the image
+                    sh "buildah tag ${IMAGE_NAME} ${REPOSITORY_TAG}"
+
+                    // Authenticate (if needed)
+                    sh "buildah login -u ${DOCKER_HUB_CREDS_USR} -p ${DOCKER_HUB_CREDS} quay.io"
+
+                    // Push the image
+                    sh "buildah push ${REPOSITORY_TAG}"
                 }
             }
         }
 
         stage('Deploy to Cluster') {
             steps {
-                sh 'envsubst < ${WORKSPACE}/deploy.yaml | kubectl apply -f -'
+                sh 'envsubst < ${WORKSPACE}/deploy.yaml | kubectl apply -f -'  // Deploy to Kubernetes
             }
         }
     }
 
     post {
         always {
-            script {
-                // Ensure cleanWs() is wrapped in a node context
-                node {
-                    cleanWs()
-                }
-            }
+            cleanWs()  // Clean the workspace
         }
         success {
             echo "Pipeline succeeded!"
