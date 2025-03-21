@@ -21,6 +21,13 @@ pipeline {
             }
         }
 
+        stage('Debug Workspace') {
+            steps {
+                sh 'pwd'  // Print current working directory
+                sh 'ls -la'  // List files in the workspace
+            }
+        }
+
         stage('Build') {
             steps {
                 sh './gradlew clean build'  // Build the project using Gradle
