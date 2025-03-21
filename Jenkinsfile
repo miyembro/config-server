@@ -30,24 +30,21 @@ pipeline {
         stage('Build and Push Image') {
             steps {
                 script {
-
                     echo "REPOSITORY_TAG: ${REPOSITORY_TAG}"
-
                     echo "IMAGE_TAG: ${IMAGE_TAG}"
-
                     echo "IMAGE_NAME: ${IMAGE_NAME}"
 
-                    // Authenticate with Docker Hub using the credentials
-                    sh "echo ${DOCKER_HUB_CREDS_PSW} | docker login -u ${DOCKER_HUB_CREDS_USR} --password-stdin"
+                    // Authenticate with Docker Hub using Buildah
+                    sh "buildah login -u ${DOCKER_HUB_CREDS_USR} -p ${DOCKER_HUB_CREDS_PSW} docker.io"
 
-                    // Build the Docker image
-                    sh "docker image build -t ${IMAGE_NAME} ."
+                    // Build the container image using Buildah
+                    sh "buildah bud -t ${IMAGE_NAME} ."
 
-                    // Tag the Docker image for the repository
-                    sh "docker tag ${IMAGE_NAME} ${REPOSITORY_TAG}"
+                    // Tag the container image for the repository
+                    sh "buildah tag ${IMAGE_NAME} ${REPOSITORY_TAG}"
 
-                    // Push the Docker image to Docker Hub
-                    sh "docker push ${REPOSITORY_TAG}"
+                    // Push the container image to Docker Hub
+                    sh "buildah push ${REPOSITORY_TAG}"
                 }
             }
         }
