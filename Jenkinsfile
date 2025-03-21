@@ -52,6 +52,12 @@ pipeline {
 
                     // Push the container image to Docker Hub
                     sh "buildah push ${REPOSITORY_TAG}"
+
+                    // Cleanup old images (optional, remove the previous images)
+                    sh "buildah rmi ${IMAGE_NAME} || true"
+                    // Removes the local image with the same name (if it exists)
+                    sh "buildah rmi $(buildah images -q --filter 'dangling=true') || true"
+                    // Removes dangling (unused) images
                 }
             }
         }
