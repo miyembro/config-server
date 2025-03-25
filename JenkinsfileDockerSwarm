@@ -12,7 +12,7 @@ pipeline {
     stages {
         stage('Preparation') {
             steps {
-                deleteDir()  // Clean the workspace
+                deleteDir()
                 git credentialsId: 'GitHub', url: "https://github.com/${ORGANIZATION_NAME}/${SERVICE_NAME}", branch: 'main'
                 sh 'chmod +x gradlew'
             }
@@ -59,9 +59,9 @@ pipeline {
                 script {
                     sh """
                         # Deploy stack to Swarm
-                        docker stack deploy \
-                          -c ${WORKSPACE}/docker-compose.yml \
-                          ${SERVICE_NAME} \
+                        docker stack deploy \\
+                          -c ${WORKSPACE}/docker-compose.yml \\
+                          ${SERVICE_NAME} \\
                           --with-registry-auth
 
                         # Verify deployment
@@ -75,7 +75,7 @@ pipeline {
     post {
         always {
             deleteDir()
-            sh 'docker system prune -f || true'  # Cleanup Docker resources
+            sh 'docker system prune -f || true'  // Cleanup Docker resources
         }
         success {
             echo "Stack deployed successfully!"
