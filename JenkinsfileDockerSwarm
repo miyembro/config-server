@@ -57,27 +57,29 @@ pipeline {
            }
        }
 
-        stage('Deploy to Docker Swarm') {
-                    steps {
-                        script {
-                            // Verify again before deployment
-                            if (!fileExists('docker-compose.yml')) {
-                                error("docker-compose.yml missing before deployment!")
-                            }
+       stage('Deploy to Docker Swarm') {
+                   steps {
+                       script {
+                           // Verify compose file exists on host
+                           sh """
+                               echo "Checking for compose file at ${COMPOSE_FILE}"
+                               if [ ! -f "${COMPOSE_FILE}" ]; then
+                                   echo "ERROR: Compose file not found at ${COMPOSE_FILE}"
+                                   exit 1
+                               fi
 
-                            sh """
-                                ls -la  # Debug: Show files in workspace
-                                docker stack deploy \
-                                --compose-file docker-compose.yml \
-                                --with-registry-auth \
-                                ${STACK_NAME}
+                               echo "Deploying stack..."
+                               docker stack deploy \
+                                 --compose-file ${COMPOSE_FILE} \
+                                 --with-registry-auth \
+                                 ${STACK_NAME}
 
-                                # Verify deployment
-                                docker stack services ${STACK_NAME}
-                            """
-                        }
-                    }
-                }
+                               echo "Stack services:"
+                               docker stack services ${STACK_NAME}
+                           """
+                       }
+                   }
+               }
     }
 
     post {
