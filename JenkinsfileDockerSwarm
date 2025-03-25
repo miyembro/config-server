@@ -42,20 +42,20 @@ pipeline {
             }
         }
 
-        stage('Build and Push Image') {
-            steps {
-                script {
-                    sh """
-                        buildah login -u ${DOCKER_HUB_CREDS_USR} -p ${DOCKER_HUB_CREDS_PSW} docker.io
-                        buildah bud -t ${IMAGE_NAME} .
-                        buildah tag ${IMAGE_NAME} ${REPOSITORY_TAG}
-                        buildah tag ${IMAGE_NAME} ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:latest
-                        buildah push ${REPOSITORY_TAG}
-                        buildah push ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:latest
-                    """
-                }
-            }
-        }
+       stage('Build and Push Image') {
+           steps {
+               script {
+                   sh """
+                       docker login -u ${DOCKER_HUB_CREDS_USR} -p ${DOCKER_HUB_CREDS_PSW} docker.io
+                       docker build -t ${IMAGE_NAME} .
+                       docker tag ${IMAGE_NAME} ${REPOSITORY_TAG}
+                       docker tag ${IMAGE_NAME} ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:latest
+                       docker push ${REPOSITORY_TAG}
+                       docker push ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:latest
+                   """
+               }
+           }
+       }
 
         stage('Deploy to Docker Swarm') {
             steps {
