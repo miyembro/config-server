@@ -1,38 +1,29 @@
 pipeline {
     agent any
 
-    stages {
-        stage('Debug Info') {
-            steps {
-                echo "PATH = ${PATH}"
-                echo "JAVA_HOME = ${JAVA_HOME}"
-                sh 'docker --version'
-                sh 'git --version'
-                sh 'printenv | sort'
-            }
-        }
+    environment {
+        // Define these before they're used
+        SERVICE_NAME = "config-server"  // Must match your GitHub repo name
+        ORGANIZATION_NAME = "miyembro"  // Defined in Jenkins UI but can be set here too
+        DOCKERHUB_USERNAME = "arjayfuentes24"  // Defined in Jenkins UI but can be set here too
+        IMAGE_NAME = "config-server-miyembro"
+        IMAGE_TAG = "${IMAGE_NAME}:${BUILD_NUMBER}"
+    }
 
+    stages {
         stage('Checkout') {
             steps {
-                script {
-                    try {
-                        checkout([
-                            $class: 'GitSCM',
-                            branches: [[name: '*/main']],
-                            extensions: [],
-                            userRemoteConfigs: [[
-                                credentialsId: 'GitHub',
-                                url: "https://github.com/${ORGANIZATION_NAME}/${SERVICE_NAME}"
-                            ]]
-                        ])
-                    } catch (Exception e) {
-                        echo "Checkout failed: ${e.toString()}"
-                        error("Pipeline failed during checkout")
-                    }
-                }
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: '*/main']],
+                    extensions: [],
+                    userRemoteConfigs: [[
+                        credentialsId: 'GitHub',
+                        url: "https://github.com/${ORGANIZATION_NAME}/${SERVICE_NAME}"
+                    ]]
+                ])
             }
         }
-
-        // Rest of your pipeline...
+        // ... rest of your pipeline
     }
 }
