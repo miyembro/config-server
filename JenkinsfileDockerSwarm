@@ -1,10 +1,13 @@
 pipeline {
     agent any
     stages {
-        stage('Clone Repository') {
+        stage('Debug') {
             steps {
-                git url: 'https://github.com/miyembro/config-server', branch: 'main'
+                sh 'pwd'
+                sh 'ls -la'
+                sh 'git --version'
             }
         }
+        // your other stages...
     }
 }
