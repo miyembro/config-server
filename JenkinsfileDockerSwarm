@@ -1,22 +1,15 @@
 pipeline {
     agent any
-    options {
-        skipDefaultCheckout true  // Prevents automatic SCM checkout
-    }
     stages {
-        stage('Checkout') {
+        stage('Debug') {
             steps {
-                checkout([  // Explicit checkout
-                    $class: 'GitSCM',
-                    branches: [[name: '*/main']],
-                    extensions: [],
-                    userRemoteConfigs: [[
-                        url: 'https://github.com/miyembro/config-server',
-                        credentialsId: '' // Add credential ID if private repo
-                    ]]
-                ])
+                sh '''
+                    echo "Current directory: $(pwd)"
+                    ls -al
+                    git --version
+                    git config --get remote.origin.url || echo "No git repo"
+                '''
             }
         }
-        // Rest of your stages...
     }
 }
