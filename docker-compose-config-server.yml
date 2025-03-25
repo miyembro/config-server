@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  config-server:
+    image: ${DOCKERHUB_USERNAME}/config-server-miyembro:latest
+    networks:
+      - miyembro-network
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+    environment:
+      - SPRING_CLOUD_CONFIG_SERVER_NATIVE_SEARCHLOCATIONS=file:///app/configurations/
+    ports:
+      - "8888:8888"
+
+networks:
+  miyembro-network:
+    external: true  # Uses existing network
