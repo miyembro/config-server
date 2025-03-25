@@ -5,53 +5,46 @@ pipeline {
         SERVICE_NAME = "config-server"
         IMAGE_NAME = "config-server-miyembro"
         IMAGE_TAG = "${IMAGE_NAME}:${BUILD_NUMBER}"
-        ORGANIZATION_NAME = "miyembro"
-        DOCKERHUB_USERNAME = "arjayfuentes24"
-        DOCKER_PASSWORD = credentials('miyembro-docker-token')  // Use the ID of your Docker Hub credentials
+        REPOSITORY_TAG = "${DOCKERHUB_USERNAME}/${IMAGE_TAG}"
+        // This creates 3 variables automatically:
+        // DOCKER_HUB_CREDS_USR = username
+        // DOCKER_HUB_CREDS_PSW = password/token
+        // DOCKER_HUB_CREDS = "username:password"
+        DOCKER_HUB_CREDS = credentials('miyembro-docker-token')
     }
 
     stages {
-        stage('Build') {
-            steps {
-                sh 'chmod +x gradlew'
-                sh './gradlew clean build'
-            }
-        }
-
         stage('Build and Push Image') {
             steps {
                 script {
-                    def REPOSITORY_TAG = "${DOCKERHUB_USERNAME}/${IMAGE_TAG}"
+                    // LOGIN USING YOUR TOKEN (exactly as you wanted)
+                    sh """
+                        echo "$DOCKER_HUB_CREDS_PSW" | \
+                        docker login -u "$DOCKER_HUB_CREDS_USR" --password-stdin
+                    """
 
-                    withCredentials([usernamePassword(
-                        credentialsId: 'miyembro-docker-token',
-                        passwordVariable: 'DOCKER_PASSWORD',
-                        usernameVariable: 'DOCKER_USERNAME'
-                    )]) {
-                        sh '''
-                            echo "$DOCKER_PASSWORD" | \
-                            docker login -u "$DOCKER_USERNAME" --password-stdin
-                        '''
-                        sh "docker build -t ${IMAGE_NAME} ."
-                        sh "docker tag ${IMAGE_NAME} ${REPOSITORY_TAG}"
-                        sh "docker tag ${IMAGE_NAME} ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:latest"
-                        sh "docker push ${REPOSITORY_TAG}"
-                        sh "docker push ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:latest"
-                    }
+                    // BUILD AND PUSH
+                    sh "docker build -t ${IMAGE_NAME} ."
+                    sh "docker tag ${IMAGE_NAME} ${REPOSITORY_TAG}"
+                    sh "docker tag ${IMAGE_NAME} ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:latest"
+                    sh "docker push ${REPOSITORY_TAG}"
+                    sh "docker push ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:latest"
                 }
             }
         }
 
         stage('Deploy to Swarm') {
             steps {
-                sh "docker stack deploy -c ${WORKSPACE}/docker-compose.yml ${SERVICE_NAME}"
+                script {
+                    // DEPLOY WITH REGISTRY AUTH
+                    sh """
+                        docker stack deploy \
+                        -c ${WORKSPACE}/docker-compose.yml \
+                        ${SERVICE_NAME} \
+                        --with-registry-auth
+                    """
+                }
             }
-        }
-    }
-
-    post {
-        always {
-            cleanWs()
         }
     }
 }
