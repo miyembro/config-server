@@ -43,7 +43,7 @@ pipeline {
 
                     // Authenticate with Docker Hub
                     withCredentials([usernamePassword(credentialsId: 'miyembro-docker-token', passwordVariable: 'DOCKER_HUB_CREDS_PSW', usernameVariable: 'DOCKER_HUB_CREDS_USR')]) {
-                        sh "docker login -u ${DOCKER_HUB_CREDS_USR} -p ${DOCKER_HUB_CREDS_PSW} docker.io"
+                        sh "docker login -u ${DOCKER_HUB_CREDS_USR} -p ${DOCKER_HUB_CREDS} docker.io"
                     }
 
                     // Build the container image using Docker
