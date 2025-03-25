@@ -6,39 +6,32 @@ pipeline {
         IMAGE_NAME = "config-server-miyembro"
         IMAGE_TAG = "${IMAGE_NAME}:${BUILD_NUMBER}"
         REPOSITORY_TAG = "${DOCKERHUB_USERNAME}/${IMAGE_TAG}"
-        DOCKER_HUB_CREDS = credentials('miyembro-docker-token')  // Automatically creates _USR and _PSW vars
+        BUILDAH_FORMAT = 'docker'
     }
 
     stages {
-        stage('Preparation') {
-            steps {
-                deleteDir()
-                git credentialsId: 'GitHub', url: "https://github.com/${ORGANIZATION_NAME}/${SERVICE_NAME}", branch: 'main'
-                sh 'chmod +x gradlew'
-            }
-        }
-
-        stage('Build') {
-            steps {
-                sh './gradlew clean build'
-            }
-        }
-
         stage('Build and Push Image') {
             steps {
                 script {
-                    // Debug output to verify credentials
-                    sh 'echo "Using Docker Hub user: $DOCKER_HUB_CREDS_USR"'
+                    withCredentials([usernamePassword(
+                        credentialsId: 'miyembro-docker-token',
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_TOKEN'
+                    )]) {
+                        sh '''
+                            # Configure Buildah storage
+                            mkdir -p $HOME/.config/containers
+                            echo -e '[storage]\ndriver = "vfs"' > $HOME/.config/containers/storage.conf
 
-                    // Buildah operations with proper credential handling
-                    sh """
-                        buildah login -u "$DOCKER_HUB_CREDS_USR" -p "$DOCKER_HUB_CREDS_PSW" docker.io
-                        buildah bud -t ${IMAGE_NAME} .
-                        buildah tag ${IMAGE_NAME} ${REPOSITORY_TAG}
-                        buildah tag ${IMAGE_NAME} ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:latest
-                        buildah push ${REPOSITORY_TAG}
-                        buildah push ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:latest
-                    """
+                            # Build and push
+                            buildah login -u "$DOCKER_USER" --password-stdin docker.io <<< "$DOCKER_TOKEN"
+                            buildah bud --storage-driver vfs -t ${IMAGE_NAME} .
+                            buildah tag ${IMAGE_NAME} ${REPOSITORY_TAG}
+                            buildah tag ${IMAGE_NAME} ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:latest
+                            buildah push --storage-driver vfs ${REPOSITORY_TAG}
+                            buildah push --storage-driver vfs ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:latest
+                        '''
+                    }
                 }
             }
         }
@@ -46,17 +39,12 @@ pipeline {
         stage('Deploy to Swarm') {
             steps {
                 script {
-                    // Deploy to Docker Swarm using compose file
-                    sh """
+                    sh '''
                         docker stack deploy \
                           -c ${WORKSPACE}/docker-compose.yml \
                           ${SERVICE_NAME} \
                           --with-registry-auth
-
-                        # Verify deployment
-                        echo "Current stack services:"
-                        docker stack services ${SERVICE_NAME}
-                    """
+                    '''
                 }
             }
         }
@@ -66,14 +54,6 @@ pipeline {
         always {
             deleteDir()
             sh 'docker system prune -f || true'
-        }
-        success {
-            echo "Stack deployed successfully!"
-            sh "docker service ls --filter name=${SERVICE_NAME}"
-        }
-        failure {
-            echo "Deployment failed!"
-            sh "docker stack ps ${SERVICE_NAME} --no-trunc || true"
         }
     }
 }
