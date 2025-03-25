@@ -57,13 +57,24 @@ pipeline {
            }
        }
 
-       stage('Deploy') {
+       stage('Deploy Config Server') {
            steps {
-               sshagent(['ec2-ssh-key']) {
+               script {
+                   // Verify compose file exists
+                   if (!fileExists('docker-compose-config-server.yml')) {
+                       error("Config Server compose file missing!")
+                   }
+
+                   // Deploy with environment substitution
                    sh """
-                       ssh ec2-user@172.31.18.227 \
-                       "docker stack deploy --compose-file /home/ec2-user/docker-compose.yml --with-registry-auth ${STACK_NAME}"
+                       docker stack deploy \
+                       --compose-file docker-compose-config-server.yml \
+                       --with-registry-auth \
+                       ${STACK_NAME}
                    """
+
+                   // Verify deployment
+                   sh "docker service ls --filter name=${STACK_NAME}_config-server"
                }
            }
        }
