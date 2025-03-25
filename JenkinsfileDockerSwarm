@@ -7,85 +7,28 @@ pipeline {
         IMAGE_TAG = "${IMAGE_NAME}:${BUILD_NUMBER}"
         REPOSITORY_TAG = "${DOCKERHUB_USERNAME}/${IMAGE_TAG}"
         DOCKER_HUB_CREDS = credentials('miyembro-docker-token')
-        STACK_NAME = "miyembro"  // Your Docker Swarm stack name
+        STACK_NAME = "miyembro"
     }
 
     stages {
-        stage('Preparation') {
-            steps {
-                cleanWs()
-                git credentialsId: 'GitHub', url: "https://github.com/${ORGANIZATION_NAME}/${SERVICE_NAME}", branch: 'main'
-                sh 'chmod +x gradlew'
-            }
-        }
-
-        stage('Debug Workspace') {
-            steps {
-                sh 'pwd'
-                sh 'ls -la'
-            }
-        }
-
-        stage('Build') {
-            steps {
-                sh './gradlew clean build'
-            }
-        }
-
-        stage('Build and Push Image') {
+        stage('Verify Environment') {
             steps {
                 script {
-                    echo "Building and pushing image with Buildah"
+                    echo "Checking required environment variables"
+                    echo "ORGANIZATION_NAME: ${ORGANIZATION_NAME ?: 'NOT SET'}"
+                    echo "DOCKERHUB_USERNAME: ${DOCKERHUB_USERNAME ?: 'NOT SET'}"
 
-                    // Authenticate with Docker Hub
-                    sh "buildah login -u ${DOCKER_HUB_CREDS_USR} -p ${DOCKER_HUB_CREDS_PSW} docker.io"
-
-                    // Build the image
-                    sh "buildah bud -t ${IMAGE_NAME} ."
-
-                    // Tag and push versions
-                    sh "buildah tag ${IMAGE_NAME} ${REPOSITORY_TAG}"
-                    sh "buildah tag ${IMAGE_NAME} ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:latest"
-
-                    sh "buildah push ${REPOSITORY_TAG}"
-                    sh "buildah push ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:latest"
+                    // Fail early if required vars are missing
+                    if (!env.ORGANIZATION_NAME?.trim()) {
+                        error("ORGANIZATION_NAME is required but not set")
+                    }
+                    if (!env.DOCKERHUB_USERNAME?.trim()) {
+                        error("DOCKERHUB_USERNAME is required but not set")
+                    }
                 }
             }
         }
 
-        stage('Deploy to Docker Swarm') {
-            steps {
-                script {
-                    // Ensure you're on a manager node (this assumes Jenkins is running on a Swarm manager)
-                    // Deploy/update the stack
-                    sh """
-                        docker stack deploy \
-                        --compose-file docker-compose.yml \
-                        ${STACK_NAME}
-                    """
-
-                    // Alternative if you need to force update images:
-                    /*
-                    sh """
-                        docker service update \
-                        --image ${REPOSITORY_TAG} \
-                        ${STACK_NAME}_${SERVICE_NAME}
-                    """
-                    */
-                }
-            }
-        }
-    }
-
-    post {
-        always {
-            cleanWs()
-        }
-        success {
-            echo "Successfully deployed to Docker Swarm!"
-        }
-        failure {
-            echo "Deployment failed!"
-        }
+        // Rest of your stages...
     }
 }
