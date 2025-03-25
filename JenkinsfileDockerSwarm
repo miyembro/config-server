@@ -7,7 +7,7 @@ pipeline {
         IMAGE_TAG = "${IMAGE_NAME}:${BUILD_NUMBER}"
         REPOSITORY_TAG = "${DOCKERHUB_USERNAME}/${IMAGE_TAG}"
         DOCKER_HUB_CREDS = credentials('miyembro-docker-token')
-        STACK_NAME = "config-stack-${BUILD_NUMBER}"
+        STACK_NAME = "miyembro"
     }
 
     stages {
