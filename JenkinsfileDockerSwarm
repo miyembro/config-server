@@ -6,29 +6,31 @@ pipeline {
         IMAGE_NAME = "config-server-miyembro"
         IMAGE_TAG = "${IMAGE_NAME}:${BUILD_NUMBER}"
         REPOSITORY_TAG = "${DOCKERHUB_USERNAME}/${IMAGE_TAG}"
-        // This creates 3 variables automatically:
-        // DOCKER_HUB_CREDS_USR = username
-        // DOCKER_HUB_CREDS_PSW = password/token
-        // DOCKER_HUB_CREDS = "username:password"
-        DOCKER_HUB_CREDS = credentials('miyembro-docker-token')
     }
 
     stages {
         stage('Build and Push Image') {
             steps {
                 script {
-                    // LOGIN USING YOUR TOKEN (exactly as you wanted)
-                    sh """
-                        echo "$DOCKER_HUB_CREDS_PSW" | \
-                        docker login -u "$DOCKER_HUB_CREDS_USR" --password-stdin
-                    """
+                    withCredentials([usernamePassword(
+                        credentialsId: 'miyembro-docker-token',
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_TOKEN'
+                    )]) {
+                        // Secure Docker login using the token
+                        sh '''
+                            docker login -u "$DOCKER_USER" -p "$DOCKER_TOKEN"
 
-                    // BUILD AND PUSH
-                    sh "docker build -t ${IMAGE_NAME} ."
-                    sh "docker tag ${IMAGE_NAME} ${REPOSITORY_TAG}"
-                    sh "docker tag ${IMAGE_NAME} ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:latest"
-                    sh "docker push ${REPOSITORY_TAG}"
-                    sh "docker push ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:latest"
+                            # Build and tag the image
+                            docker build -t ${IMAGE_NAME} .
+                            docker tag ${IMAGE_NAME} ${REPOSITORY_TAG}
+                            docker tag ${IMAGE_NAME} ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:latest
+
+                            # Push the images
+                            docker push ${REPOSITORY_TAG}
+                            docker push ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:latest
+                        '''
+                    }
                 }
             }
         }
@@ -36,13 +38,12 @@ pipeline {
         stage('Deploy to Swarm') {
             steps {
                 script {
-                    // DEPLOY WITH REGISTRY AUTH
-                    sh """
+                    sh '''
                         docker stack deploy \
-                        -c ${WORKSPACE}/docker-compose.yml \
-                        ${SERVICE_NAME} \
-                        --with-registry-auth
-                    """
+                          -c ${WORKSPACE}/docker-compose.yml \
+                          ${SERVICE_NAME} \
+                          --with-registry-auth
+                    '''
                 }
             }
         }
