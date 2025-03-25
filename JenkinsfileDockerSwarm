@@ -6,9 +6,24 @@ pipeline {
         IMAGE_NAME = "config-server-miyembro"
         IMAGE_TAG = "${IMAGE_NAME}:${BUILD_NUMBER}"
         REPOSITORY_TAG = "${DOCKERHUB_USERNAME}/${IMAGE_TAG}"
+        DOCKER_HUB_CREDS = credentials('miyembro-docker-token')
     }
 
     stages {
+        stage('Preparation') {
+            steps {
+                deleteDir()  // Clean the workspace
+                git credentialsId: 'GitHub', url: "https://github.com/${ORGANIZATION_NAME}/${SERVICE_NAME}", branch: 'main'
+                sh 'chmod +x gradlew'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh './gradlew clean build'
+            }
+        }
+
         stage('Build and Push Image') {
             steps {
                 script {
@@ -17,18 +32,22 @@ pipeline {
                         usernameVariable: 'DOCKER_USER',
                         passwordVariable: 'DOCKER_TOKEN'
                     )]) {
-                        // Secure Docker login using the token
                         sh '''
-                            docker login -u "$DOCKER_USER" -p "$DOCKER_TOKEN"
+                            # Install Buildah if not present
+                            if ! command -v buildah &> /dev/null; then
+                                echo "Installing Buildah..."
+                                sudo apt-get update -qq && sudo apt-get install -y buildah
+                            fi
 
-                            # Build and tag the image
-                            docker build -t ${IMAGE_NAME} .
-                            docker tag ${IMAGE_NAME} ${REPOSITORY_TAG}
-                            docker tag ${IMAGE_NAME} ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:latest
+                            # Authenticate and build
+                            buildah login -u "$DOCKER_USER" -p "$DOCKER_TOKEN" docker.io
+                            buildah bud -t ${IMAGE_NAME} .
 
-                            # Push the images
-                            docker push ${REPOSITORY_TAG}
-                            docker push ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:latest
+                            # Tag and push
+                            buildah tag ${IMAGE_NAME} ${REPOSITORY_TAG}
+                            buildah tag ${IMAGE_NAME} ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:latest
+                            buildah push ${REPOSITORY_TAG}
+                            buildah push ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:latest
                         '''
                     }
                 }
@@ -38,14 +57,33 @@ pipeline {
         stage('Deploy to Swarm') {
             steps {
                 script {
-                    sh '''
+                    sh """
+                        # Deploy stack to Swarm
                         docker stack deploy \
                           -c ${WORKSPACE}/docker-compose.yml \
                           ${SERVICE_NAME} \
                           --with-registry-auth
-                    '''
+
+                        # Verify deployment
+                        docker service ls --filter name=${SERVICE_NAME}
+                    """
                 }
             }
+        }
+    }
+
+    post {
+        always {
+            deleteDir()
+            sh 'docker system prune -f || true'  # Cleanup Docker resources
+        }
+        success {
+            echo "Stack deployed successfully!"
+            sh "docker service ps ${SERVICE_NAME} --no-trunc"
+        }
+        failure {
+            echo "Deployment failed!"
+            sh "docker stack ps ${SERVICE_NAME} --no-trunc || true"
         }
     }
 }
