@@ -7,7 +7,7 @@ pipeline {
         IMAGE_TAG = "${IMAGE_NAME}:${BUILD_NUMBER}"
         REPOSITORY_TAG = "${DOCKERHUB_USERNAME}/${IMAGE_TAG}"
         DOCKER_HUB_CREDS = credentials('miyembro-docker-token')
-        STACK_NAME = "miyembro"
+        STACK_NAME = "config-stack-${BUILD_NUMBER}"
     }
 
     stages {
@@ -29,23 +29,20 @@ pipeline {
         }
 
         stage('Preparation') {
-            agent any  // Explicit agent declaration for this stage
             steps {
-                cleanWs()
+                deleteDir()  // Replaces cleanWs()
                 git credentialsId: 'GitHub', url: "https://github.com/${ORGANIZATION_NAME}/${SERVICE_NAME}", branch: 'main'
                 sh 'chmod +x gradlew'
             }
         }
 
         stage('Build') {
-            agent any
             steps {
                 sh './gradlew clean build'
             }
         }
 
         stage('Build and Push Image') {
-            agent any
             steps {
                 script {
                     sh """
@@ -61,7 +58,6 @@ pipeline {
         }
 
         stage('Deploy to Docker Swarm') {
-            agent any
             steps {
                 script {
                     sh """
@@ -77,18 +73,16 @@ pipeline {
 
     post {
         always {
-            cleanWs()
+            deleteDir()  // Clean workspace after build
             script {
                 echo "Pipeline completed - result: ${currentBuild.result}"
             }
         }
         success {
             echo "Pipeline succeeded!"
-            slackSend(color: 'good', message: "SUCCESS: ${env.JOB_NAME} #${env.BUILD_NUMBER}")
         }
         failure {
             echo "Pipeline failed!"
-            slackSend(color: 'danger', message: "FAILED: ${env.JOB_NAME} #${env.BUILD_NUMBER}")
         }
     }
 }
