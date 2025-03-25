@@ -1,13 +1,22 @@
 pipeline {
     agent any
+    options {
+        skipDefaultCheckout true  // Prevents automatic SCM checkout
+    }
     stages {
-        stage('Debug') {
+        stage('Checkout') {
             steps {
-                sh 'pwd'
-                sh 'ls -la'
-                sh 'git --version'
+                checkout([  // Explicit checkout
+                    $class: 'GitSCM',
+                    branches: [[name: '*/main']],
+                    extensions: [],
+                    userRemoteConfigs: [[
+                        url: 'https://github.com/miyembro/config-server',
+                        credentialsId: '' // Add credential ID if private repo
+                    ]]
+                ])
             }
         }
-        // your other stages...
+        // Rest of your stages...
     }
 }
