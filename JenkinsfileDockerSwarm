@@ -8,6 +8,7 @@ pipeline {
         REPOSITORY_TAG = "${DOCKERHUB_USERNAME}/${IMAGE_TAG}"
         DOCKER_HUB_CREDS = credentials('miyembro-docker-token')
         STACK_NAME = "miyembro"
+        SWARM_MANAGER_IP = "172.31.18.227"
     }
 
     stages {
@@ -57,29 +58,47 @@ pipeline {
            }
        }
 
-       stage('Deploy to Docker Swarm') {
-                   steps {
-                       script {
-                           // Verify compose file exists on host
-                           sh """
-                               echo "Checking for compose file at ${COMPOSE_FILE}"
-                               if [ ! -f "${COMPOSE_FILE}" ]; then
-                                   echo "ERROR: Compose file not found at ${COMPOSE_FILE}"
-                                   exit 1
-                               fi
+     stage('Deploy to Swarm') {
+         environment {
+             // Use your discovered IP
+             SWARM_MANAGER = "172.31.18.227"
+             DOCKER_HOST = "tcp://${SWARM_MANAGER}:2376"
+         }
 
-                               echo "Deploying stack..."
-                               docker stack deploy \
-                                 --compose-file ${COMPOSE_FILE} \
-                                 --with-registry-auth \
-                                 ${STACK_NAME}
+         steps {
+             withCredentials([
+                 file(credentialsId: 'swarm-ca-cert', variable: 'DOCKER_CA'),
+                 file(credentialsId: 'swarm-client-cert', variable: 'DOCKER_CERT'),
+                 file(credentialsId: 'swarm-client-key', variable: 'DOCKER_KEY')
+             ]) {
+                 script {
+                     sh '''
+                         # Configure TLS
+                         export DOCKER_TLS_VERIFY=1
+                         export DOCKER_CERT_PATH=${WORKSPACE}/certs
+                         mkdir -p ${DOCKER_CERT_PATH}
+                         cp ${DOCKER_CA} ${DOCKER_CERT_PATH}/ca.pem
+                         cp ${DOCKER_CERT} ${DOCKER_CERT_PATH}/cert.pem
+                         cp ${DOCKER_KEY} ${DOCKER_CERT_PATH}/key.pem
 
-                               echo "Stack services:"
-                               docker stack services ${STACK_NAME}
-                           """
-                       }
-                   }
-               }
+                         # Verify connection
+                         docker node ls
+
+                         # Deploy/update only config-server
+                         docker service update \
+                           --image ${DOCKERHUB_USERNAME}/config-server-miyembro:latest \
+                           --with-registry-auth \
+                           ${STACK_NAME}_config-server || \
+                         docker service create \
+                           --name ${STACK_NAME}_config-server \
+                           --publish 8888:8888 \
+                           --with-registry-auth \
+                           ${DOCKERHUB_USERNAME}/config-server-miyembro:latest
+                     '''
+                 }
+             }
+         }
+     }
     }
 
     post {
