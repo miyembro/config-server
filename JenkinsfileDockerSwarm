@@ -1,99 +1,38 @@
 pipeline {
     agent any
 
-    environment {
-        SERVICE_NAME = "config-server"
-        IMAGE_NAME = "config-server-miyembro"
-        IMAGE_TAG = "${IMAGE_NAME}:${BUILD_NUMBER}"
-    }
-
     stages {
-        stage('Preparation') {
+        stage('Debug Info') {
             steps {
-                cleanWs()
-                git credentialsId: 'GitHub', url: "https://github.com/${ORGANIZATION_NAME}/${SERVICE_NAME}", branch: 'main'
-                sh 'chmod +x gradlew'
+                echo "PATH = ${PATH}"
+                echo "JAVA_HOME = ${JAVA_HOME}"
+                sh 'docker --version'
+                sh 'git --version'
+                sh 'printenv | sort'
             }
         }
 
-        stage('Debug Workspace') {
-            steps {
-                sh 'pwd'
-                sh 'ls -la'
-                // Add debug for environment variables
-                sh 'echo "DOCKERHUB_USERNAME: ${DOCKERHUB_USERNAME}"'
-                sh 'echo "ORGANIZATION_NAME: ${ORGANIZATION_NAME}"'
-            }
-        }
-
-        stage('Build') {
-            steps {
-                sh './gradlew clean build'
-            }
-        }
-
-        stage('Build and Push Image') {
+        stage('Checkout') {
             steps {
                 script {
-                    // Calculate repository tag
-                    REPOSITORY_TAG = "${env.DOCKERHUB_USERNAME}/${env.IMAGE_TAG}"
-
-                    echo "Using REPOSITORY_TAG: ${REPOSITORY_TAG}"
-
-                    // Authenticate with Docker Hub
-                    withCredentials([usernamePassword(
-                        credentialsId: 'miyembro-docker-token',
-                        passwordVariable: 'DOCKER_PASSWORD',
-                        usernameVariable: 'DOCKER_USERNAME'
-                    )]) {
-                        // Debug credentials
-                        echo "Docker Username: ${DOCKER_USERNAME}"
-                        echo "Docker Password: ${DOCKER_PASSWORD ? '*****' : 'NOT SET'}"
-
-                        // Login to Docker Hub
-                        sh "echo ${DOCKER_PASSWORD} | docker login -u ${DOCKER_USERNAME} --password-stdin"
-
-                        // Build and tag images
-                        sh "docker build -t ${env.IMAGE_NAME} ."
-                        sh "docker tag ${env.IMAGE_NAME} ${REPOSITORY_TAG}"
-                        sh "docker tag ${env.IMAGE_NAME} ${env.DOCKERHUB_USERNAME}/${env.IMAGE_NAME}:latest"
-
-                        // Push images
-                        sh "docker push ${REPOSITORY_TAG}"
-                        sh "docker push ${env.DOCKERHUB_USERNAME}/${env.IMAGE_NAME}:latest"
+                    try {
+                        checkout([
+                            $class: 'GitSCM',
+                            branches: [[name: '*/main']],
+                            extensions: [],
+                            userRemoteConfigs: [[
+                                credentialsId: 'GitHub',
+                                url: "https://github.com/${ORGANIZATION_NAME}/${SERVICE_NAME}"
+                            ]]
+                        ])
+                    } catch (Exception e) {
+                        echo "Checkout failed: ${e.toString()}"
+                        error("Pipeline failed during checkout")
                     }
                 }
             }
         }
 
-        stage('Deploy to Swarm') {
-            steps {
-                script {
-                    echo "Deploying to Docker Swarm..."
-                    sh "docker stack deploy -c ${WORKSPACE}/docker-compose.yml ${env.SERVICE_NAME}"
-                }
-            }
-        }
-
-        stage('Clean Up') {
-            steps {
-                script {
-                    echo "Removing local images..."
-                    sh "docker rmi ${env.IMAGE_NAME} ${REPOSITORY_TAG} ${env.DOCKERHUB_USERNAME}/${env.IMAGE_NAME}:latest || true"
-                }
-            }
-        }
-    }
-
-    post {
-        always {
-            cleanWs()
-        }
-        success {
-            echo "Pipeline succeeded!"
-        }
-        failure {
-            echo "Pipeline failed!"
-        }
+        // Rest of your pipeline...
     }
 }
