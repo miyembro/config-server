@@ -58,17 +58,26 @@ pipeline {
        }
 
         stage('Deploy to Docker Swarm') {
-            steps {
-                script {
-                    sh """
-                        docker stack deploy \
-                        --compose-file docker-compose.yml \
-                        --with-registry-auth \
-                        ${STACK_NAME}
-                    """
+                    steps {
+                        script {
+                            // Verify again before deployment
+                            if (!fileExists('docker-compose.yml')) {
+                                error("docker-compose.yml missing before deployment!")
+                            }
+
+                            sh """
+                                ls -la  # Debug: Show files in workspace
+                                docker stack deploy \
+                                --compose-file docker-compose.yml \
+                                --with-registry-auth \
+                                ${STACK_NAME}
+
+                                # Verify deployment
+                                docker stack services ${STACK_NAME}
+                            """
+                        }
+                    }
                 }
-            }
-        }
     }
 
     post {
