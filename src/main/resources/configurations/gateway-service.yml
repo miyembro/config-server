@@ -20,6 +20,7 @@ spring:
               - "http://13.53.224.124:4200"
               - "http://51.20.206.136:4200"
               - "http://angular-app:4200"
+              - "http://miyembro.net"
             allowedMethods: "*"
             allowedHeaders: "*"
             allowCredentials: true
