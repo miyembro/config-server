@@ -28,6 +28,8 @@ spring:
               - "http://www.miyembro.net"
               - "https://miyembro.net"
               - "https://www.miyembro.net"
+              - "https://miyembro.click"
+              - "https://www.miyembro.click"
             allowedMethods: "*"
             allowedHeaders: "*"
             allowCredentials: true
