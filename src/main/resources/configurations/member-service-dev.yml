@@ -3,7 +3,7 @@ server:
 spring:
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://miyembromemberdev.ch2cua0wgb3v.eu-north-1.rds.amazonaws.com:5432/member
+    url: jdbc:postgresql://postgres-master:5432/member
     username: arjay
     password: Miyembro24122022
   jpa:
