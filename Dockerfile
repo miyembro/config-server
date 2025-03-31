@@ -3,7 +3,7 @@ WORKDIR /app
 COPY . .
 RUN ./gradlew build --no-daemon
 
-FROM eclipse-temurin:24-jre-alpine-3.21
+FROM eclipse-temurin:21-jre-jammy
 
 WORKDIR /app
 
