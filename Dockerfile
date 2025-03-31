@@ -1,19 +1,15 @@
-# Use an official OpenJDK runtime as a parent image
-FROM docker.io/library/openjdk:21-jdk
-#FROM docker.io/library/openjdk:21-jdk-slim AS runtime
+FROM docker.io/library/openjdk:21-jdk-slim AS builder
+WORKDIR /app
+COPY . .
+RUN ./gradlew build --no-daemon
 
-# Set the working directory in the container
-#working directory
+FROM eclipse-temurin:24-jre-alpine-3.21
+
 WORKDIR /app
 
-# Copy your JAR file from the local machine to the container
-COPY build/libs/config-server-0.0.1-SNAPSHOT.jar /app/config-server-miyembro-0.0.1-SNAPSHOT.jar
+COPY --from=builder /app/build/libs/config-server-0.0.1-SNAPSHOT.jar ./app.jar
+COPY src/main/resources/configurations ./configurations
 
-COPY src/main/resources/configurations /app/configurations
-
-# Expose the port that your config server will run on (default is 8888)
 EXPOSE 8888
 
-# Run the JAR file
-ENTRYPOINT ["java", "-jar", "/app/config-server-miyembro-0.0.1-SNAPSHOT.jar"]
-
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]
