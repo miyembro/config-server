@@ -29,3 +29,6 @@ management:
     tracing:
       enabled: true
       endpoint: http://zipkin:9411/api/v2/spans
+
+server:
+  use-forward-headers: true
