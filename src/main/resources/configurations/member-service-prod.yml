@@ -41,3 +41,14 @@ management:
 application:
   config:
     organization-url: http://gateway-service:8222/api/v1/organizations
+
+logging:
+  level:
+    org:
+      springframework:
+        security: DEBUG
+        cloud: DEBUG
+    com:
+      google:
+        api:
+          client: DEBUG

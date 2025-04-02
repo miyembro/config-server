@@ -19,4 +19,11 @@ keyStore:
 
 logging:
   level:
-    org.springframework.cloud: DEBUG
+    org:
+      springframework:
+        security: DEBUG
+        cloud: DEBUG
+    com:
+      google:
+        api:
+          client: DEBUG
