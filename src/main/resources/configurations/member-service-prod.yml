@@ -1,5 +1,6 @@
 server:
   port: 8050
+  use-forward-headers: true
 spring:
   datasource:
     driver-class-name: org.postgresql.Driver
@@ -52,3 +53,4 @@ logging:
       google:
         api:
           client: DEBUG
+
