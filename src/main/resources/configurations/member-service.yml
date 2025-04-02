@@ -32,7 +32,7 @@ spring:
             client-id: "654581949282-dmvkqbivaa8rmvem7ipjbas30p5akkrm.apps.googleusercontent.com"
             client-secret: "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"
             scope: openid, profile, email
-            redirect-uri: "http://localhost:8222/login/oauth2/code/google"
+            redirect-uri: "https://miyembro.net/login/oauth2/code/google"
         provider:
           google:
             authorization-uri: https://accounts.google.com/o/oauth2/auth
