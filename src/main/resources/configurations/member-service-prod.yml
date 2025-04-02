@@ -25,7 +25,15 @@ spring:
     baseline-version: 0
     user: ${spring.datasource.username}
     password: ${spring.datasource.password}
-
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: "654581949282-dmvkqbivaa8rmvem7ipjbas30p5akkrm.apps.googleusercontent.com"
+            client-secret: "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"
+            scope: openid, profile, email
+            redirect-uri: "https://miyembro.net"
 
 eureka:
   instance:
