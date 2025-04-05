@@ -73,6 +73,10 @@ spring:
           uri: lb:http://MEMBER-SERVICE
           predicates:
             - Path=/api/v1/roles/**
+        - id: confirmation-service
+          uri: lb:http://MEMBER-SERVICE
+          predicates:
+            - Path=/api/v1/confirmations/**
         - id: event-service
           uri: lb:http://EVENT-SERVICE
           predicates:
@@ -81,6 +85,10 @@ spring:
           uri: lb:http://EVENT-SERVICE
           predicates:
             - Path=/api/v1/event-confirmation/**
+        - id: email-service
+          uri: lb:http://EMAIL-SERVICE
+          predicates:
+            - Path=/api/v1/emails/**
 
 token:
   secret: TaK+HaV^uvCHEFsEVfypW#7g9^k*Z8$V

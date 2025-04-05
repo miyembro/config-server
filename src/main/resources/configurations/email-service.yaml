@@ -1,0 +1,43 @@
+server:
+  port: 8060
+
+spring:
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: miyembroarjayprojects@gmail.com
+    password: vtld snuu mnrw pees
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5432/email
+    username: arjay
+    password: arjay
+
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: email
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.deserializer.key.delegate.class: org.apache.kafka.common.serialization.StringDeserializer
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        spring.json.type.mapping: registrationEmailConfirmation:com.rjproj.memberapp.dto.RegistrationEmailConfirmation
+        spring.json.trusted.packages: "com.rjproj.email.dto,com.rjproj.memberapp.dto"
+    topic:
+      name: "registration-email-confirmation-topic"
+
+eureka:
+  instance:
+    hostname: localhost
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka

@@ -63,3 +63,5 @@ logging:
         api:
           client: DEBUG
 
+frontend:
+  base-url: https://miyembro.net
